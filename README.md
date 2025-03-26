@@ -51,13 +51,13 @@ Function to copy data saved from Bucket to the same bucket or another bucket. If
 
 **OUTPUT**: A confirmation and location of the data copied.
 
-# Using `aou_data_storage` 
+# Using `gc_data_storage` 
 
 ### How to install the package?
-!pip install aou_data_storage
+!pip install gc_data_storage
 
 ## Saving data - examples
-import aou_data_storage as ds
+import gc_data_storage as ds
 
 ### Saving a dataframe to the Google Cloud bucket
 Saving 'df' as 'example.csv' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
@@ -130,7 +130,7 @@ Copy data from bucket 1 to bucket 2. Replace 'bucket1_id' and 'bucket2_id' with 
 
 ```
 ds.copy_from_bucket_to_bucket(origin_filename = 'example.csv'
-, origin_bucket_directory = f"{bucket1_id}/data/shared"
-, destination_bucket_directory = f"{bucket2_id}/data/shared")
+                             , origin_bucket_directory = f"{bucket1_id}/data/shared"
+                             , destination_bucket_directory = f"{bucket2_id}/data/shared")
 
 ```
