@@ -1,5 +1,3 @@
-%%writefile gc_data_storage.py
-
 import pandas as pd
 import os
 import subprocess
