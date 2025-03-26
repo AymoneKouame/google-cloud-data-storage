@@ -1,4 +1,5 @@
 # Functions in the 'gc_data_storage' package.
+
 ## `save_data_to_bucket()`
 Function to copy data from the persistent disk into the Workspace Bucket. It supports dataframes, plots and more. The inputs are as follows:
 
@@ -10,7 +11,7 @@ Function to copy data from the persistent disk into the Workspace Bucket. It sup
   - 'from_directory' (default = 'data/shared'): a string; the bucket directory where you wish to save the data.
   - 'index' (default = True): boolean; For dataframes, should the dataframe index be saved?
   - 'dpi' (default = 'figure'): float or 'figure; For plots, what resolution? Floats should be in dots per inch. If 'figure', it will use the figure's dpi value.
-  - bucket (default = os.getenv('WORKSPACE_BUCKET') - the default bucket variable in the All of US Researcher Work
+  - bucket (default = the default bucket in the All of US Researcher Workbench). The user is free to add their own default bucket `gs//yourbucketname`
 
 **OUTPUT**: A confirmation and location in the bucket where the data was saved.
 
@@ -23,7 +24,8 @@ Function to copy data from the Workspace Bucket into the persistent disk. It sup
      - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they will just be saved to the persistent disk.
   - 'to_directory' (default = 'data/shared'): A string; the bucket directory where your data was saved.
   - 'keep_copy_in_pd' (default = True): boolean; if True, the file will be saved on the persistent disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the persistent disk. For non-supported extensions 'keep_copy_in_pd' has no effect. The file will be copied in the persistent disk regardless.
-
+  - bucket (default = the default bucket in the All of US Researcher Workbench). The user is free to add their own default bucket `gs//yourbucketname`
+    
 **OUTPUT**: A pandas dataframe or a plot image.
 
 ## `list_saved_data()`
