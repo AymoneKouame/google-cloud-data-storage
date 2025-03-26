@@ -51,25 +51,29 @@ Function to copy data saved from Bucket to the same bucket or another bucket. If
 **OUTPUT**: A confirmation and location of the data copied.
 
 
-# Using `aou_data_storage` 
+## Using `aou_data_storage` 
 
-## How to install the package?
+### How to install the package?
 !pip install aou_data_storage
 
-## Examples
+### Examples
 import aou_data_storage as ds
 
-## saving a dataframe 
+### saving a dataframe 
 Saving 'df' as 'example.csv' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
+
 ```ds.save_data_to_bucket(data =df, filename = 'example.csv')```
 
 Saving 'df' as 'example.csv' in the bucket without index under subfolder 'user1' in the 'data/shared' directory.
+
 ```ds.save_data_to_bucket(data = df, filename = 'example.tsv', to_directory= 'data/shared/user1', index = False)```
 
-## saving a plot 
+### saving a plot 
 Saving 'plot1' as 'plot1.jpeg' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
+
 ```ds.save_data_to_bucket(data = plot1, filename = 'plot1.jpeg')```
 
-## saving otehr data types. 
+### saving otehr data types. 
 Saving 'fake_file.text' under a subfolder 'user1' in the 'data/shared' directory.
+
 ```ds.save_data_to_bucket(data = None, filename = 'fake_file.txt', to_directory= 'data/shared/user1')```
