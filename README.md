@@ -54,10 +54,14 @@ Function to copy data saved from Bucket to the same bucket or another bucket. If
 # Using `gc_data_storage` 
 
 ### How to install the package?
-!pip install gc_data_storage
+```
+pip install gc_data_storage
+```
 
 ## Saving data - examples
+```
 import gc_data_storage as ds
+```
 
 ### Saving a dataframe to the Google Cloud bucket
 Saving 'df' as 'example.csv' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
