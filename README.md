@@ -127,9 +127,11 @@ list_saved_data(in_bucket= False)
 ```
 
 ### Copy data from bucket to bucket - examples
-Copy data from bucket 1 to bucket 2. 'bucket_id' has the format 'gs//bucketid'
+Copy data from bucket 1 to bucket 2. Replace 'bucket1_id' and 'bucket2_id' with the appropriate strings. 'bucket_id' has the format 'gs//bucketid'
 
 ```
-ds.copy_from_bucket_to_bucket(origin_filename = 'example.csv', origin_bucket_directory = f"{bucket1_id}/data/shared", destination_bucket_directory = f"{bucket2_id}/data/shared")
+ds.copy_from_bucket_to_bucket(origin_filename = 'example.csv'
+, origin_bucket_directory = f"{bucket1_id}/data/shared"
+, destination_bucket_directory = f"{bucket2_id}/data/shared")
 
 ```
