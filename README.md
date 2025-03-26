@@ -1,7 +1,8 @@
 # Functions in the 'gc_data_storage' package.
 
 ## `save_data_to_bucket()`
-Function to copy data from the persistent disk into the Workspace Bucket. It supports dataframes, plots and more. The inputs are as follows:
+Function to copy data from the persistent disk into the Workspace Bucket. The default bucket in the All of US Researcher Workbench). The user is free to add their own default bucket `gs//yourbucketname` upon initiating the function.
+The package supports dataframes, plots and more. The inputs are as follows:
 
 **INPUTS**
   - 'data' (required): an object; the dataframe or plot to be saved. To save a file (e.g. .py, .text), use 'df = None'.
@@ -60,34 +61,35 @@ pip install gc_data_storage
 
 ## Saving data - examples
 ```
-import gc_data_storage as ds
+from gc_data_storage import gc_data_storage as gs
+gs = gs() #Uses default bucket. Use 'gs = gs(bucket = 'gs://your-bucket-name')' to change the bucket
 ```
 
 ### Saving a dataframe to the Google Cloud bucket
 Saving 'df' as 'example.csv' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
 
 ```
-ds.save_data_to_bucket(data =df, filename = 'example.csv')
+gs.save_data_to_bucket(data =df, filename = 'example.csv')
 ```
 
 Saving 'df' as 'example.csv' in the bucket without index under subfolder 'user1' in the 'data/shared' directory.
 
 ```
-ds.save_data_to_bucket(data = df, filename = 'example.tsv', to_directory= 'data/shared/user1', index = False)
+gs.save_data_to_bucket(data = df, filename = 'example.tsv', to_directory= 'data/shared/user1', index = False)
 ```
 
 ### Saving a plot to the Google Cloud bucket
 Saving 'plot1' as 'plot1.jpeg' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
 
 ```
-ds.save_data_to_bucket(data = plot1, filename = 'plot1.jpeg')
+gs.save_data_to_bucket(data = plot1, filename = 'plot1.jpeg')
 ```
 
 ### Saving other data types to the Google Cloud bucket
 Saving 'fake_file.text' under a subfolder 'user1' in the 'data/shared' directory.
 
 ```
-ds.save_data_to_bucket(data = None, filename = 'fake_file.txt', to_directory= 'data/shared/user1')
+gs.save_data_to_bucket(data = None, filename = 'fake_file.txt', to_directory= 'data/shared/user1')
 ```
 
 
@@ -96,17 +98,17 @@ ds.save_data_to_bucket(data = None, filename = 'fake_file.txt', to_directory= 'd
 Reading data from the bucket as a dataframe. By default, it will be read from 'data/shared' directory and a copy will be kept in the persistent disk.
 
 ```
-df1 = read_data_from_bucket('example.csv')
+df1 = gs.read_data_from_bucket('example.csv')
 ```
 
 ```
-plot1 = read_data_from_bucket('plot1.jpeg')
+plot1 = gs.read_data_from_bucket('plot1.jpeg')
 ```
 
 Reading data saved under the 'data/shared/aymone' directory. We do not want a copy in the persistent sisk
 
 ```
-df2 = read_data_from_bucket('example.tsv', from_directory = 'data/shared/user1', keep_copy_in_pd=False)
+df2 = gs.read_data_from_bucket('example.tsv', from_directory = 'data/shared/user1', keep_copy_in_pd=False)
 ```
 
 ## Listing data - examples
@@ -114,26 +116,26 @@ df2 = read_data_from_bucket('example.tsv', from_directory = 'data/shared/user1',
 List all the files in the bucket 'data/shared' directory. This is the default.
 
 ```
-list_saved_data()
+gs.list_saved_data()
 ```
 
 List all the csv files in the bucket directory 'data/shared/user1'.
 
 ```
-list_saved_data(in_directory='data/shared/user1', pattern = '*csv')
+gs.list_saved_data(in_directory='data/shared/user1', pattern = '*csv')
 ```
 
 List all the files in the persistent disk.
 
 ```
-list_saved_data(in_bucket= False)
+gs.list_saved_data(in_bucket= False)
 ```
 
 ## Copy data from bucket to bucket - examples
 Copy data from bucket 1 to bucket 2. Replace 'bucket1_id' and 'bucket2_id' with the appropriate strings. 'bucket_id' has the format 'gs//bucketid'
 
 ```
-ds.copy_from_bucket_to_bucket(origin_filename = 'example.csv'
+gs.copy_from_bucket_to_bucket(origin_filename = 'example.csv'
                              , origin_bucket_directory = f"{bucket1_id}/data/shared"
                              , destination_bucket_directory = f"{bucket2_id}/data/shared")
 
