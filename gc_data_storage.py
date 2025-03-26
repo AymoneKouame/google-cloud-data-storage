@@ -1,9 +1,4 @@
-"""
-Author: Aymone Jeanne Kouame
-Date Released: 03/26/2025
-Last Updated: 03/26/2025
-
-"""
+%%writefile gc_data_storage.py
 
 import pandas as pd
 import os
@@ -12,10 +7,9 @@ from IPython.display import Image
 
 class gc_data_storage:
     
-    def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET')
-                 , install_modules = 'pip openpyxl'): 
+    def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET')):
         
-        intall_if_not_installed(install_modules)
+        self.bucket = bucket
         
     def intall_if_not_installed(modules):
         try:
@@ -26,13 +20,16 @@ class gc_data_storage:
                 import openpyxl
             except ModuleNotFoundError:
                 print('\nPlease RESTART YOUR KERNEL to use the module.')  
-
-    def save_data_to_bucket(data, filename, to_directory = 'data/shared'
-                            , index = True
-                            , dpi = 'figure'
-                            , bucket = bucket):
-
-       print(f"""
+   
+    intall_if_not_installed('openpyxl')
+    
+    def save_data_to_bucket(self
+                            , data, filename, to_directory = 'data/shared'
+                            , index:bool = True
+                            , dpi = 'figure'):
+        
+        bucket = self.bucket
+        print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Saving data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     To location =  '{bucket}/{to_directory}'
         """)
@@ -63,10 +60,10 @@ class gc_data_storage:
             print(result.stderr, result.stdout)
 
 
-    def read_data_from_bucket(filename, from_directory = 'data/shared'
-                              , keep_copy_in_pd = True
-                              , bucket = bucket):
-
+    def read_data_from_bucket(self
+                              , filename, from_directory = 'data/shared'
+                              , keep_copy_in_pd:bool = True):
+        bucket = self.bucket
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Reading data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     From location =  '{bucket}/{from_directory}'
@@ -85,16 +82,19 @@ class gc_data_storage:
             else: data = fun_dd[file_ext](full_filename, engine = 'pyarrow')
       
         elif file_ext in plot_extensions:   
-            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)            
+            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)      
+            #print(result.stderr, result.stdout)       
             data = Image(filename)
             subprocess.run(["rm", filename], capture_output=True, text=True).stdout.strip("\n")
                 
         elif file_ext not in df_extensions+plot_extensions:
             result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
             data = '' 
-            if result.returncode == 0: print(f''' Your file extension is NOT in {df_extensions+plot_extensions}. It will just be copied to the persistent disk.''')
+            if result.returncode == 0: print(f'''
+    Your file extension is NOT in {df_extensions+plot_extensions}
+    It will just be copied to the persistent disk.''')
 
-
+        ## keeping a pd copy
         if keep_copy_in_pd == True:
             result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
             if result.returncode == 0: print(f"'{filename}' is in the persistent disk.")               
@@ -102,8 +102,8 @@ class gc_data_storage:
         return data
 
     def copy_from_bucket_to_bucket(origin_filename, origin_bucket_directory, destination_bucket_directory
-                                  , destination_filename = None):
-
+                                   , destination_filename = None):
+        
         if destination_filename == None: destination_filename = origin_filename
         origin_fullfilename = f"{origin_bucket_directory}/{origin_filename}"
         dest_fullfilename = f"{destination_bucket_directory}/{destination_filename}"
@@ -117,15 +117,17 @@ class gc_data_storage:
         subprocess.run(["gsutil", "cp", origin_fullfilename, dest_fullfilename])
 
 
-    def list_saved_data(in_bucket = True, in_directory = 'data/shared', pattern = '*'):
-
+    def list_saved_data(self, in_bucket:bool = True, in_directory = '', pattern = '*'):
+        
+        bucket = self.bucket
+            
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Listing data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """)
 
-        if in_bucket == True:                                         
-            subprocess.run(["gsutil", "ls", f"{os.getenv('WORKSPACE_BUCKET')}/{in_directory}/{pattern}"])
-
-        else:
-            directory = in_directory.replace('data/shared',' ')
-            os.system(f'ls {directory}{pattern}')
+        if (in_bucket == True) & (in_directory.strip() == ''):                                         
+            subprocess.run(["gsutil", "ls", f"{bucket}/{pattern}"])
+        elif (in_bucket == True) & (in_directory.strip() != ''): 
+            subprocess.run(["gsutil", "ls", f"{bucket}/{in_directory}/{pattern}"])
+        elif in_bucket == False:
+            os.system(f'ls {in_directory}{pattern}')
