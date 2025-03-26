@@ -10,6 +10,7 @@ class gc_data_storage:
     def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET')):
         
         self.bucket = bucket
+        os.system(f'pip install --upgrade pip pyarrow')
         
     def intall_if_not_installed(modules):
         try:
