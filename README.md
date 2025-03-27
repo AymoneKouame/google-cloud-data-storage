@@ -58,11 +58,18 @@ pip install gc_data_storage
 ```
 
 ## Saving data - examples
+
+Using the default bucket in the All of Us Resercher Workbecnch
 ```
 from gc_data_storage import gc_data_storage as gs
-gs = gs() #Uses default bucket. Use 'gs = gs(bucket = 'gs://your-bucket-name')' to change the bucket
+gs = gs()
 ```
 
+Using another Google Cloud Workspace Bucket
+```
+from gc_data_storage import gc_data_storage as gs
+gs  = gs(bucket = 'gs://your-bucket-name')
+```
 ### Saving a dataframe to the Google Cloud bucket
 Saving 'df' as 'example.csv' in the bucket. By default, it will be saved with index under the 'data/shared' directory.
 
