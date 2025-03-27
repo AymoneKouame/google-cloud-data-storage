@@ -1,3 +1,7 @@
+# Description
+'gc_data_storage' is a utility package for data storage in Google Cloud Environments.
+The functions to move data between a Google Cloud Workspace bucket and the persistent, within the same bucket or between two different buckets. It was created to be used within the All of Us Researcher Workbench by default but can be used in other Google Cloud environements.
+
 # Functions in the 'gc_data_storage' package.
 
 ## `save_data_to_bucket()`
