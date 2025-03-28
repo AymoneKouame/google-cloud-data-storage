@@ -17,8 +17,8 @@ The package supports dataframes, plots and more. The inputs are as follows:
 
 **INPUTS**
   - ***'data' (required)***: an object; the dataframe or plot to be saved. To save a file (e.g. .py, .text), use 'df = None'.
-     - For dataframes, the currently supported extensions: .csv, .tsv, .xlsx, .parquet. 
-     - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they need to be saved to the persistent disk first.
+     - For dataframes, the currently supported extensions are: .csv, .tsv, .xlsx, .parquet. 
+     - For plots, the currently supported extensions are: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they need to be saved to the persistent disk first.
   - **'filename' (required)***: a string; the name of the file to save data, including file extension, in the bucket.
   - *'bucket'*: (default = bucket_id defined at initialization) The user can use a different bucket here.
   - *'from_directory'* (default = 'data/shared'): a string; the bucket directory where you wish to save the data.
