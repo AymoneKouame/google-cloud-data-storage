@@ -16,14 +16,14 @@ Function to copy data from the persistent disk into the Workspace Bucket. The de
 The package supports dataframes, plots and more. The inputs are as follows:
 
 **INPUTS**
-  - **'data' (required)**: an object; the dataframe or plot to be saved. To save a file (e.g. .py, .text), use 'df = None'.
+  - ***'data' (required)***: an object; the dataframe or plot to be saved. To save a file (e.g. .py, .text), use 'df = None'.
      - For dataframes, the currently supported extensions: .csv, .tsv, .xlsx, .parquet. 
      - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they need to be saved to the persistent disk first.
-  - **'filename' (required)**: a string; the name of the file to save data, including file extension, in the bucket.
-  - 'bucket': (default = bucket_id defined at initialization) The user can use a different bucket here.
-  - 'from_directory' (default = 'data/shared'): a string; the bucket directory where you wish to save the data.
-  - 'index' (default = True): boolean; For dataframes, should the dataframe index be saved?
-  - 'dpi' (default = 'figure'): float or 'figure; For plots, what resolution? Floats should be in dots per inch. If 'figure', it will use the figure's dpi value.
+  - **'filename' (required)***: a string; the name of the file to save data, including file extension, in the bucket.
+  - *'bucket'*: (default = bucket_id defined at initialization) The user can use a different bucket here.
+  - *'from_directory'* (default = 'data/shared'): a string; the bucket directory where you wish to save the data.
+  - *'index'* (default = True): boolean; For dataframes, should the dataframe index be saved?
+  - *'dpi'* (default = 'figure'): float or 'figure; For plots, what resolution? Floats should be in dots per inch. If 'figure', it will use the figure's dpi value.
 
 **OUTPUT**: A confirmation and location in the bucket where the data was saved.
 
@@ -31,12 +31,12 @@ The package supports dataframes, plots and more. The inputs are as follows:
 Function to copy data from the Workspace Bucket into the persistent disk. It supports dataframes, plots and more. The inputs are as follows:
 
 **INPUTS**
-  - **'filename' (required)**: A string; the name of the file in the bucket, including file extension.
+  - ***'filename' (required)***: A string; the name of the file in the bucket, including file extension.
      - For dataframes, the currently supported extensions: .csv, .tsv, lsx, .parquet
      - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they will just be saved to the persistent disk.
-  - 'bucket': (default = bucket_id defined at initialization) The user can use a different bucket here.
-  - 'to_directory' (default = 'data/shared'): A string; the bucket directory where your data was saved.
-  - 'keep_copy_in_pd' (default = True): boolean; if True, the file will be saved on the persistent disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the persistent disk. For non-supported extensions 'keep_copy_in_pd' has no effect. The file will be copied in the persistent disk regardless.
+  - *'bucket'*: (default = bucket_id defined at initialization) The user can use a different bucket here.
+  - *'to_directory'* (default = 'data/shared'): A string; the bucket directory where your data was saved.
+  - *'keep_copy_in_pd'* (default = True): boolean; if True, the file will be saved on the persistent disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the persistent disk. For non-supported extensions 'keep_copy_in_pd' has no effect. The file will be copied in the persistent disk regardless.
     
 **OUTPUT**: A pandas dataframe or a plot image.
 
@@ -44,10 +44,10 @@ Function to copy data from the Workspace Bucket into the persistent disk. It sup
 Function to list data saved in the workspace bucket or in the persistent disk. The inputs are as follows:
 
 **INPUTS**
-  - 'in_bucket' (default = True): boolean; list data in the bucket or the persistent disk? 'True', will list data in the persistent disk.
-  - 'in_directory' (default = 'data/shared' for the bucket and current notebook directory for the persistent disk): which directory to use?
-  - 'pattern' (default = '*') which pattern to use for the files to be listed?
-  - 'bucket': (default = bucket_id defined at initialization) The user can use a different bucket here.
+  - *'in_bucket'* (default = True): boolean; list data in the bucket or the persistent disk? 'True', will list data in the persistent disk.
+  - *'in_directory'* (default = 'data/shared' for the bucket and current notebook directory for the persistent disk): which directory to use?
+  - *'pattern'* (default = '*') which pattern to use for the files to be listed?
+  - *'bucket'*: (default = bucket_id defined at initialization) The user can use a different bucket here.
 
 **OUTPUT**: List of files in the specified bucket or persistent disk location.
 
@@ -55,12 +55,12 @@ Function to list data saved in the workspace bucket or in the persistent disk. T
 Function to copy data saved from Bucket to the same bucket or another bucket. If the buckets are different, the user must be owner of both workspaces.
 
 **INPUTS**
-  - 'origin_filename' (required): A string; the name of the file (with extension) to be copied from the original bucket to the destination bucket. 
+  - ***'origin_filename' (required)***: A string; the name of the file (with extension) to be copied from the original bucket to the destination bucket. 
      - name should have the format 'gs//bucketid/dir1/dir2'
      - Can be any data type (e.g dataframe, plot, text file, code file, etc.)
-  - origin_bucket_directory (Default = 'gs://default-bucket/data/shared'): A string; full name of the directory where data is located,  includng the bucket_name ('gs://origin-bucket-name/directory') .
-  - destination_filename (Default = origin_filename). A string; The name of the file in the destination bucket.
-  - destination_bucket_directory: A string; full name of the directory where the user wants to copy the file,  includng the bucket_name ('gs://destination-bucket-name/directory') .
+  - *origin_bucket_directory* (Default = 'gs://default-bucket/data/shared'): A string; full name of the directory where data is located,  includng the bucket_name ('gs://origin-bucket-name/directory') .
+  - *destination_filename* (Default = origin_filename). A string; The name of the file in the destination bucket.
+  - *destination_bucket_directory*: A string; full name of the directory where the user wants to copy the file,  includng the bucket_name ('gs://destination-bucket-name/directory') .
 
 **OUTPUT**: A confirmation and location of the data copied.
 
