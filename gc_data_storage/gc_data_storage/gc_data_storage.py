@@ -10,6 +10,7 @@ import subprocess
 from google.cloud import storage
 from google.api_core import exceptions
 from IPython.display import Image
+import pkg_resources
 
 class gc_data_storage:
     
@@ -68,11 +69,12 @@ More information, including examples, at https://github.com/AymoneKouame/google-
         """)    
 
     def save_data_to_bucket(self
-                            , data, filename, to_directory = 'data/shared'
+                            , data, filename
+                            , bucket = None, to_directory = 'data/shared'
                             , index:bool = True
                             , dpi = 'figure'):
         
-        bucket = self.bucket
+        if bucket == None: bucket = self.bucket
         self.error_handling(bucket)
         
         print(f"""
@@ -100,14 +102,17 @@ More information, including examples, at https://github.com/AymoneKouame/google-
   
         else:
             print(f"""
-    Your file extension is NOT in {df_extensions+plot_extensions}
-    We assume it is already saved to the persistent disk.\n""")
+    Your file extension is NOT in {df_extensions+plot_extensions}.
+    We assume it is already saved to your persistent disk.\n""")
             result = subprocess.run(["gsutil", "cp", filename, full_filename], capture_output=True, text=True)
             print(result.stderr, result.stdout)
 
 
-    def read_data_from_bucket(self, filename, from_directory = 'data/shared', keep_copy_in_pd:bool = True):
-        bucket = self.bucket
+    def read_data_from_bucket(self, filename, bucket = None
+                              , from_directory = 'data/shared'
+                              , keep_copy_in_pd:bool = True):
+        
+        if bucket == None: bucket = self.bucket
         self.error_handling(bucket)
         
         print(f"""
@@ -142,7 +147,7 @@ More information, including examples, at https://github.com/AymoneKouame/google-
 
         if keep_copy_in_pd == True:
             result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
-            if result.returncode == 0: print(f"'{filename}' is in the persistent disk.")               
+            if result.returncode == 0: print(f"'{filename}' is also in the persistent disk.")               
 
         return data
 
@@ -179,9 +184,9 @@ More information, including examples, at https://github.com/AymoneKouame/google-
         subprocess.run(["gsutil", "cp", origin_fullfilename, dest_fullfilename])
 
 
-    def list_saved_data(self, in_bucket:bool = True, in_directory = '', pattern = '*'):
+    def list_saved_data(self, bucket = None, in_bucket:bool = True, in_directory = '', pattern = '*'):
         
-        bucket = self.bucket
+        if bucket == None: bucket = self.bucket
         self.error_handling(bucket)    
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Listing data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
