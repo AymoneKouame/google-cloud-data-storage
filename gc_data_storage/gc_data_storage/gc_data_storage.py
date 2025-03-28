@@ -10,57 +10,60 @@ import subprocess
 from google.cloud import storage
 from google.api_core import exceptions
 from IPython.display import Image
-import pkg_resources
 
 class gc_data_storage:
     
     def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET')):
-        
         self.bucket = bucket
+        
+    def error_handling(self, bucket_id):
 
-	bucket_name = bucket.replace('gs://','')
-	try:
-	    storage.Client().bucket(bucket_name).exists()
-	except exceptions.Forbidden as err:
-    	    print("Forbidden error:", err)
-    	    print(f"\nPlease ensure you have entered the correct bucket name.")
-	except exceptions.Unauthorized as err:
-    	    print("Unauthorized error:", err)
-   	    print("\nPlease ensure you have entered the correct bucket name.")
-	except exceptions.NotFound as err:
-    	    print("NotFound error:", err)
-    	    print("\nPlease ensure you have entered the correct bucket name.")
-
-
-    def README():
-
+        bucket_name = bucket_id.replace('gs://','')
+        try:
+            storage.Client().bucket(bucket_name).exists()
+        except exceptions.Forbidden as err:
+            print(f"Forbidden error for '{bucket_name}':", err)
+            print(f"Please enter the correct bucket name.\n")
+        except exceptions.Unauthorized as err:
+            print(f"Unauthorized error for '{bucket_name}':", err)
+            print(f"Please enter the correct bucket name.\n")
+        except exceptions.NotFound as err:
+            print(f"NotFound error for '{bucket_name}':", err)
+            print(f"Please enter the correct bucket name.\n")
+        except ValueError as err:
+            print(f"ValueError error for '{bucket_name}':", err)
+            print(f"Please enter the correct bucket name.\n")            
+            
+    
+    def README(self):
+        
         print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ README: How to Use gc_data_storage?~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ README: How to Use gc_data_storage?~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
 gc_data_storage lets you easily move data between your development environment (e.g. Jupyter Notebook) and your Google Cloud Workspace bucket. 
 It integrates the command line tool gsutil.
 
- * Use `save_data_to_bucket(data, filename)` to save data from your development environment to the bucket.
+  * Use `save_data_to_bucket(data, filename)` to save data from your development environment to the bucket.
 
- * Use `read_data_to_bucket(filename)` to read data from the bucket into your development environment, with the option to keep a copy in the persistent disk.
+  * Use `read_data_to_bucket(filename)` to read data from the bucket into your development environment, with the option to keep a copy in the persistent disk.
 
- * Use `copy_from_bucket_to_bucket(origin_filename, destination_bucket_directory)` to copy data between different directories within the bucket or between two different buckets owned by the user.
+  * Use `copy_from_bucket_to_bucket(origin_filename, destination_bucket_directory)` to copy data between different directories within the bucket or between two different buckets owned by the user.
 
- * Use `list_saved_data()` to obtain a list of data saved in the bucket or the persistent disk.
+  * Use `list_saved_data()` to obtain a list of data saved in the bucket or the persistent disk.
 
 gc_data_storage was originally written to be used within the All of Us Researcher Workbench environment but can be used in other Google Cloud Environments.
 
-```
-# Example code
-from gc_data_storage import gc_data_storage as gs
+    ```
+    # Example code
+    from gc_data_storage import gc_data_storage as gs
 
-## initialize (when initializing,  use the default All of US Researcher workbench bucket or input your own.
-gs = gs()
+    ## initialize (when initializing,  use the default All of US Researcher workbench bucket or input your own.
+    gs = gs()
 
-## list data in the bucket root directory 
-gs.list_saved_data()
-```
-More information, including examples, at https://github.com/AymoneKouame/google-cloud-data-storage.
+    ## list data in the bucket root directory 
+    gs.list_saved_data()
+    ```
+More information, including examples, at https://github.com/AymoneKouame/google-cloud-data-storage/ .
 
         """)    
 
@@ -70,6 +73,8 @@ More information, including examples, at https://github.com/AymoneKouame/google-
                             , dpi = 'figure'):
         
         bucket = self.bucket
+        self.error_handling(bucket)
+        
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Saving data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     To location =  '{bucket}/{to_directory}'
@@ -103,6 +108,8 @@ More information, including examples, at https://github.com/AymoneKouame/google-
 
     def read_data_from_bucket(self, filename, from_directory = 'data/shared', keep_copy_in_pd:bool = True):
         bucket = self.bucket
+        self.error_handling(bucket)
+        
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Reading data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     From location =  '{bucket}/{from_directory}'
@@ -139,13 +146,27 @@ More information, including examples, at https://github.com/AymoneKouame/google-
 
         return data
 
-    def copy_from_bucket_to_bucket(origin_filename, origin_bucket_directory, destination_bucket_directory
-                                   , destination_filename = None):
+    def copy_from_bucket_to_bucket(self, origin_filename
+                                   , destination_bucket_directory
+                                   , origin_bucket_directory = None
+                                   , destination_filename = None
+                                   ):
         
         if destination_filename == None: destination_filename = origin_filename
         if origin_bucket_directory == None: 
-	   bucket = self.bucket
-	   origin_bucket_directory = '{bucket}/data/shared'
+            bucket = self.bucket
+            origin_bucket_directory = f'{bucket}/data/shared'
+        
+        origin_bucketid = '/'+origin_bucket_directory.split('/',3)[-1]
+        origin_bucketid = origin_bucket_directory.split(origin_bucketid)[0]
+        
+        dest_bucketid = '/'+destination_bucket_directory.split('/',3)[-1]
+        dest_bucketid = origin_bucket_directory.split(dest_bucketid)[0]
+       
+        self.error_handling(origin_bucketid)
+        self.error_handling(dest_bucketid)
+        
+        
         origin_fullfilename = f"{origin_bucket_directory}/{origin_filename}"
         dest_fullfilename = f"{destination_bucket_directory}/{destination_filename}"
 
@@ -161,7 +182,7 @@ More information, including examples, at https://github.com/AymoneKouame/google-
     def list_saved_data(self, in_bucket:bool = True, in_directory = '', pattern = '*'):
         
         bucket = self.bucket
-            
+        self.error_handling(bucket)    
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Listing data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """)
