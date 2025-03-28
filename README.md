@@ -1,6 +1,13 @@
 # Description
-'gc_data_storage' is a utility package for data storage in Google Cloud Environments.
-The functions move data between a Google Cloud Workspace bucket and the persistent disk, within the same bucket or between two different buckets. It also includes a function to list saved data in the persistent disk or workspace bucket. It was created to be used within the All of Us Researcher Workbench by default but can also be used in other Google Cloud environements.
+`gc_data_storage` lets you easily move data between your development environment (e.g. Jupyter Notebook) and your Google Cloud Workspace bucket. 
+It integrates the command line tool gsutil.
+
+ * Save data from your development environment to the bucket.
+ * Read data from the bucket into your development environment, with the option to keep a copy in the persistent disk.
+ * Copy data between different directories within the bucket or between two different buckets owned by the user.
+ * Obtain a list of data saved in the bucket or the persistent disk.
+
+`gc_data_storage` was originally written to be used within the All of Us Researcher Workbench environment (using the default environement bucket) but can be used in other Google Cloud Environments (user must input their own bucket).
 
 # Functions in the 'gc_data_storage' package.
 
@@ -45,12 +52,12 @@ Function to list data saved in the workspace bucket or in the persistent disk. T
 Function to copy data saved from Bucket to the same bucket or another bucket. If the buckets are different, the user must be owner of both workspaces.
 
 **INPUTS**
-  - 'origin_filename': the name of the file (with extension) to be copied from the original bucket to the destination bucket. 
+  - 'origin_filename' (required): A string; the name of the file (with extension) to be copied from the original bucket to the destination bucket. 
      - name should have the format 'gs//bucketid/dir1/dir2'
      - Can be any data type (e.g dataframe, plot, text file, code file, etc.)
-  - origin_bucket_directory: full name of the directory where data is located       
-  - destination_bucket_directory: full name of the directory where the user wants to copy 'data'.
-  - destination_filename (Default = origin_filename). The name of the file in the destination bucket.
+  - origin_bucket_directory (Default = 'gs://default-workspace-bucket/data/shared'): A string; full name of the directory where data is located,  includng the bucket_name ('gs://origin-bucket-name/directory') .
+  - destination_filename (Default = origin_filename). A string; The name of the file in the destination bucket.
+  - destination_bucket_directory: A string; full name of the directory where the user wants to copy the file,  includng the bucket_name ('gs://destination-bucket-name/directory') .
 
 **OUTPUT**: A confirmation and location of the data copied.
 
