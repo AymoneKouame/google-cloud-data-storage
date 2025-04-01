@@ -24,8 +24,8 @@ The package supports dataframes, plots and more. The inputs are as follows:
      - For dataframes, the currently supported extensions: .csv, .tsv, .xlsx, .parquet. 
      - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they need to be saved to the disk first.
   - **'filename' (required)**: a string; the name of the file to save data, including file extension, in the bucket.
-  - 'bucket' (default = workspace environment bucket or bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where your data is to be saved.
-  - 'directory' (default = 'notebooks' or directory defined at initialization): a string; the bucket directory where you wish to save the data.
+  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where your data is to be saved.
+  - 'directory' (default = directory defined at initialization): a string; the bucket directory where you wish to save the data.
   - 'index' (default = True): boolean; For dataframes, should the dataframe index be saved?
   - 'dpi' (default = 'figure'): float or 'figure; For plots, what resolution? Floats should be in dots per inch. If 'figure', it will use the figure's dpi value.
 
@@ -38,8 +38,8 @@ Function to copy data from the Workspace Bucket into the disk. It supports dataf
   - **'filename' (required)**: A string; the name of the file in the bucket, including file extension.
      - For dataframes, the currently supported extensions: .csv, .tsv, lsx, .parquet
      - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they will just be saved to the disk.
-  - 'bucket' (default = workspace environment bucket or bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data to be read is.
-  - 'directory' (default = 'notebooks' or directory defined at initialization): A string; the bucket directory where your data was saved. 
+  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data to be read is.
+  - 'directory' (default = directory defined at initialization): A string; the bucket directory where your data was saved. 
   - 'save_copy_in_disk' (default = True): boolean; if True, the file will be saved on the disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the disk. 
 For non-supported extensions 'save_copy_in_disk' has no effect. The file will be copied in the disk regardless.
     
@@ -55,7 +55,7 @@ Function to copy data saved from Bucket to the same bucket or another bucket. If
   - **'destination_bucket' (required)**: A string; the name of the bucket to copy the data to (format: 'gs://destination-bucket-name').
   - 'origin_bucket' (default = bucket defined at initialization): A string; the name of the bucket where the data to copy is located (format: 'gs://destination-bucket-name').
   - 'origin_directory' (default = directory defined at initialization): A string; the name of the directory within the origin bucket where the data to copy is located.
-  - 'destination_directory' (default = directory name defined at initialization): A string; the name of the directory within the destination bucket where the data is to be copied.
+  - 'destination_directory' (default = same name as directory defined at initialization): A string; the name of the directory within the destination bucket where the data is to be copied.
   - 'destination_filename' (Default = 'origin_filename'). A string; The new name of the file in the destination bucket.
 
 **OUTPUT**: A confirmation and location of the data copied.
@@ -66,9 +66,8 @@ Function to list data saved in the workspace bucket or in the disk. The inputs a
 
 **INPUTS**
   - 'bucket_or_disk' (default = 'bucket'): A string; list data in the bucket or the disk? Enter 'bucket' or 'disk'.
-  - 'bucket' (default = workspace environment bucket or bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data is to list is.
-  - 'directory': A string. Which directory to use? If bucket_or_disk = 'bucket', the default directory is 'notebooks' or the directory defined at initialization. 
-If bucket_or_disk = 'disk', the default directory is the root.
+  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data is to list is.
+  - 'directory': A string. Which directory to use? If bucket_or_disk = 'bucket', the default is directory defined at initialization. If bucket_or_disk = 'disk', the default directory is the root disk directory.
   - 'pattern' (default = '*') which pattern to use for the files to be listed?
 
 **OUTPUT**: List of files in the specified bucket or disk location.
