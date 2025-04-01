@@ -9,8 +9,8 @@ It integrates the command line tool gsutil.
 
 `gc_data_storage` was originally written to be used within the All of Us Researcher Workbench environment but can be used in other Google Cloud Environments. 
 
- * At initialization, the default bucket to be used for all the functions below is the Workspace environment bucket and the default directory is 'notebooks'.
- * At the user can define another default bucket (format `gs//yourbucketname`) and/or another default directory to be used for all the functions below. 
+ * At initialization, the default bucket used for all the functions below is the Workspace environment bucket and the default directory is the root.
+ * The user can define another default bucket (format `gs//yourbucketname`) and/or another default directory to be used for all the functions below. 
 
 
 # Functions in the 'gc_data_storage' package.
