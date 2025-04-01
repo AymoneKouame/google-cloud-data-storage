@@ -1,7 +1,7 @@
 """
 Author: Aymone Jeanne Kouame
 Date Released: 03/26/2025
-Last Updated: 03/28/2025  
+Last Updated: 04/01/2025  
 """
 
 import pandas as pd
@@ -14,8 +14,10 @@ import pkg_resources
 
 class gc_data_storage:
     
-    def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET')):
+    def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET'), directory = ''):
+
         self.bucket = bucket
+        self.directory = directory
         
     def error_handling(self, bucket_id):
 
@@ -33,24 +35,26 @@ class gc_data_storage:
             print(f"Please enter the correct bucket name.\n")
         except ValueError as err:
             print(f"ValueError error for '{bucket_name}':", err)
-            print(f"Please enter the correct bucket name.\n")            
-            
+            print(f"Please enter the correct bucket name.\n")
+        except FileNotFoundError as err:
+            print(f"FileNotFoundError error for '{bucket_name}':", err)
+            print(f"Please enter the correct bucket name and/or filename.")            
     
     def README(self):
         
         print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ README: How to Use gc_data_storage?~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ README: How to use gc_data_storage?~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
 gc_data_storage lets you easily move data between your development environment (e.g. Jupyter Notebook) and your Google Cloud Workspace bucket. 
 It integrates the command line tool gsutil.
 
   * Use `save_data_to_bucket(data, filename)` to save data from your development environment to the bucket.
 
-  * Use `read_data_to_bucket(filename)` to read data from the bucket into your development environment, with the option to keep a copy in the persistent disk.
+  * Use `read_data_to_bucket(filename)` to read data from the bucket into your development environment, with the option to keep a copy in the disk.
 
-  * Use `copy_from_bucket_to_bucket(origin_filename, destination_bucket_directory)` to copy data between different directories within the bucket or between two different buckets owned by the user.
+  * Use `copy_from_bucket_to_bucket(origin_filename, destination_bucket)` to copy data between different directories within the same bucket or between two different buckets owned by the user.
 
-  * Use `list_saved_data()` to obtain a list of data saved in the bucket or the persistent disk.
+  * Use `list_saved_data()` to obtain a list of data saved in the bucket or the disk.
 
 gc_data_storage was originally written to be used within the All of Us Researcher Workbench environment but can be used in other Google Cloud Environments.
 
@@ -70,19 +74,24 @@ More information, including examples, at https://github.com/AymoneKouame/google-
 
     def save_data_to_bucket(self
                             , data, filename
-                            , bucket = None, to_directory = 'data/shared'
+                            , bucket = None
+                            , directory = None
                             , index:bool = True
                             , dpi = 'figure'):
         
-        if bucket == None: bucket = self.bucket
+        if bucket == None: 
+            bucket = self.bucket
+        if directory == None: 
+            directory = self.directory
+        
         self.error_handling(bucket)
         
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Saving data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    To location =  '{bucket}/{to_directory}'
+    To location =  '{bucket}/{directory}'
         """)
 
-        full_filename = f'{bucket}/{to_directory}/{filename}'    
+        full_filename = f'{bucket}/{directory}/{filename}'.replace('//','/').replace('gs:/','gs://')      
         file_ext = '.'+filename.split('.')[1].lower()
 
         fun_dd = {'.csv': pd.DataFrame.to_csv , '.xlsx': pd.DataFrame.to_excel, '.parquet': pd.DataFrame.to_parquet}
@@ -91,8 +100,10 @@ More information, including examples, at https://github.com/AymoneKouame/google-
         plot_extensions = ['.png', '.jpeg', '.bmp', '.tiff', '.pdf', '.emf']
 
         if file_ext in df_extensions:
-            if file_ext == '.tsv': pd.DataFrame.to_csv(data, full_filename, sep="\t")
-            else: fun_dd[file_ext](data, full_filename, index = index)
+            if file_ext == '.tsv': 
+                pd.DataFrame.to_csv(data, full_filename, sep="\t")
+            else: 
+                fun_dd[file_ext](data, full_filename, index = index)
             print(f"Dataframe saved as '{filename}' in location.")
      
         elif file_ext in plot_extensions:   
@@ -103,24 +114,30 @@ More information, including examples, at https://github.com/AymoneKouame/google-
         else:
             print(f"""
     Your file extension is NOT in {df_extensions+plot_extensions}.
-    We assume it is already saved to your persistent disk.\n""")
+    We assume it is already saved to your disk.\n""")
             result = subprocess.run(["gsutil", "cp", filename, full_filename], capture_output=True, text=True)
             print(result.stderr, result.stdout)
 
 
-    def read_data_from_bucket(self, filename, bucket = None
-                              , from_directory = 'data/shared'
-                              , keep_copy_in_pd:bool = True):
+    def read_data_from_bucket(self
+                              , filename
+                              , bucket = None
+                              , directory = None
+                              , save_copy_in_disk:bool = True):
         
-        if bucket == None: bucket = self.bucket
+        if bucket == None:
+            bucket = self.bucket
+        if directory == None:
+            directory = self.directory
+            
         self.error_handling(bucket)
         
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Reading data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    From location =  '{bucket}/{from_directory}'
+    From location =  '{bucket}/{directory}'
         """)
 
-        full_filename = f'{bucket}/{from_directory}/{filename}'    
+        full_filename = f'{bucket}/{directory}/{filename}'.replace('//','/').replace('gs:/','gs://')  
         file_ext = '.'+filename.split('.')[1].lower()
 
         df_extensions = ['.csv', '.xlsx', '.tsv', '.parquet']
@@ -129,51 +146,51 @@ More information, including examples, at https://github.com/AymoneKouame/google-
         fun_dd = {'.csv': pd.read_csv, '.xlsx': pd.read_excel, '.parquet': pd.read_parquet}
 
         if file_ext in df_extensions:
-            if file_ext == '.tsv': data = pd.read_csv(full_filename, sep="\t", engine = 'pyarrow')
-            else: data = fun_dd[file_ext](full_filename, engine = 'pyarrow')
+            if file_ext == '.tsv': 
+                data = pd.read_csv(full_filename, sep="\t", engine = 'pyarrow')
+            else: 
+                data = fun_dd[file_ext](full_filename, engine = 'pyarrow')
       
         elif file_ext in plot_extensions:   
-            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)      
-            #print(result.stderr, result.stdout)       
+            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)          
             data = Image(filename)
             subprocess.run(["rm", filename], capture_output=True, text=True).stdout.strip("\n")
                 
         elif file_ext not in df_extensions+plot_extensions:
             result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
             data = '' 
-            if result.returncode == 0: print(f'''
+            if result.returncode == 0: 
+                print(f'''
     Your file extension is NOT in {df_extensions+plot_extensions}
-    It will just be copied to the persistent disk.''')
+    It will just be copied to the disk.''')
 
-        if keep_copy_in_pd == True:
+        if save_copy_in_disk == True:
             result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
-            if result.returncode == 0: print(f"'{filename}' is also in the persistent disk.")               
+            if result.returncode == 0:
+                print(f"'{filename}' is also in the disk.")               
 
         return data
 
-    def copy_from_bucket_to_bucket(self, origin_filename
-                                   , destination_bucket_directory
-                                   , origin_bucket_directory = None
+    def copy_from_bucket_to_bucket(self
+                                   , origin_filename
+                                   , destination_bucket
+                                   , origin_bucket = None
+                                   , origin_directory = None
+                                   , destination_directory = None
                                    , destination_filename = None
                                    ):
         
         if destination_filename == None: destination_filename = origin_filename
-        if origin_bucket_directory == None: 
-            bucket = self.bucket
-            origin_bucket_directory = f'{bucket}/data/shared'
-        
-        origin_bucketid = '/'+origin_bucket_directory.split('/',3)[-1]
-        origin_bucketid = origin_bucket_directory.split(origin_bucketid)[0]
-        
-        dest_bucketid = '/'+destination_bucket_directory.split('/',3)[-1]
-        dest_bucketid = origin_bucket_directory.split(dest_bucketid)[0]
+        if origin_bucket == None: origin_bucket = self.bucket
+        if origin_directory == None: origin_directory = self.directory
+        if destination_directory == None: destination_directory = self.directory
        
-        self.error_handling(origin_bucketid)
-        self.error_handling(dest_bucketid)
+        self.error_handling(origin_bucket)
+        self.error_handling(destination_bucket)
         
         
-        origin_fullfilename = f"{origin_bucket_directory}/{origin_filename}"
-        dest_fullfilename = f"{destination_bucket_directory}/{destination_filename}"
+        origin_fullfilename = f"{origin_bucket}/{origin_directory}/{origin_filename}".replace('//','/').replace('gs:/','gs://')  
+        dest_fullfilename = f"{destination_bucket}/{destination_directory}/{destination_filename}".replace('//','/').replace('gs:/','gs://')  
 
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ copying data between buckets ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -184,17 +201,28 @@ More information, including examples, at https://github.com/AymoneKouame/google-
         subprocess.run(["gsutil", "cp", origin_fullfilename, dest_fullfilename])
 
 
-    def list_saved_data(self, bucket = None, in_bucket:bool = True, in_directory = '', pattern = '*'):
-        
-        if bucket == None: bucket = self.bucket
-        self.error_handling(bucket)    
+    def list_saved_data(self
+                        , bucket_or_disk = 'bucket'
+                        , bucket = None
+                        , directory = None
+                        , pattern = '*'):
+ 
+        if bucket == None or bucket == 'bucket': bucket = self.bucket
+             
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Listing data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """)
-
-        if (in_bucket == True) & (in_directory.strip() == ''):                                         
-            subprocess.run(["gsutil", "ls", f"{bucket}/{pattern}"])
-        elif (in_bucket == True) & (in_directory.strip() != ''): 
-            subprocess.run(["gsutil", "ls", f"{bucket}/{in_directory}/{pattern}"])
-        elif in_bucket == False:
-            os.system(f'ls {in_directory}{pattern}')
+        
+        if (bucket_or_disk.lower()  in  ['bucket','']):
+            if directory == None: directory = self.directory
+            self.error_handling(bucket)
+            location = f"{bucket}/{directory}/{pattern}".replace('//','/').replace('gs:/','gs://')            
+            print(f'In {location}\n')
+            subprocess.run(["gsutil", "ls", location])               
+                
+        elif (bucket_or_disk.lower() in ['persistent disk','persistent_disk', 'disk']) \
+                or (bucket_or_disk.lower() not in ['bucket','']) :
+            if directory == None: directory = ''
+            location = f"{directory}/{pattern}".replace('/*','')
+            print(f'In disk {location}\n\n')
+            os.system(f'ls {location}')

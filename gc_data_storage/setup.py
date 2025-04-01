@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gc_data_storage',
-    version='0.1.14',
+    version='0.2.2',
     author='Aymone Jeanne Kouame',
     author_email='aymone.jk@gmail.com',
     description= "Python utility for data storage in Google Cloud Environments.",

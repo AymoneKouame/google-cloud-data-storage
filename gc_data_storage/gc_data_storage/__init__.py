@@ -1,5 +1,6 @@
 from gc_data_storage.gc_data_storage import gc_data_storage
 import pkg_resources
+import subprocess
 
 def install_if_not_installed(modules):  
     uninstalled_packages = [p for p in modules if p not in sorted(["%s==%s" % (i.key, i.version) for i in pkg_resources.working_set])]
