@@ -72,6 +72,17 @@ Function to list data saved in the workspace bucket or in the disk. The inputs a
 
 **OUTPUT**: List of files in the specified bucket or disk location.
 
+## `delete_saved_data()`
+Function to list data saved in the workspace bucket or in the disk. The inputs are as follows:
+
+**INPUTS**
+  - **'filename' (required)**: A string; the name of the file in the bucket or disk to delete, including file extension.
+  - 'bucket_or_disk' (default = 'bucket'): A string; Is the data located in the bucket or the disk? Enter 'bucket' or 'disk'.
+  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data is to list is.
+  - 'directory': A string. Which directory to use? If bucket_or_disk = 'bucket', the default is directory defined at initialization. If bucket_or_disk = 'disk', the default directory is the root disk directory.
+
+**OUTPUT**: List of files in the specified bucket or disk location.
+
 # Using `gc_data_storage` 
 
 ### How to install the package?
