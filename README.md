@@ -16,7 +16,7 @@ It integrates the command line tool gsutil.
 # Functions in the 'gc_data_storage' package.
 
 ## `save_data_to_bucket()`
-Function to copy data from the disk into the Workspace Bucket. The default bucket in the All of US Researcher Workbench). The user is free to add their own default bucket `gs//yourbucketname` upon initiating the function.
+Function to save data from the development environment or the disk into the Workspace Bucket. The default bucket in the All of US Researcher Workbench). The user is free to add their own default bucket `gs//yourbucketname` upon initiating the function.
 The package supports dataframes, plots and more. The inputs are as follows:
 
 **INPUTS**
@@ -31,6 +31,18 @@ The package supports dataframes, plots and more. The inputs are as follows:
 
 **OUTPUT**: A confirmation and location in the bucket where the data was saved.
 
+## `save_to_xlworkbook()`
+Function to save data from the development environment or the disk into the Workspace Bucket as an excel workbook (excel file with multiple sheets).
+
+**INPUTS**
+  - **'filename' (required)**: a string; the name of the excel workbook file to save data, including file extension .xlsx, in the bucket.
+  - **'sheets_dict' (required)**: a dictionary of format {'sheet1_name':df1, 'sheet2_name': df2} that specifies the dataframes and sheet names of the  workbook file.
+  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where your data is to be saved.
+  - 'directory' (default = directory defined at initialization): a string; the bucket directory where you wish to save the data.
+  - 'index' (default = True): boolean; should the dataframe index be saved?
+
+**OUTPUT**: A confirmation and location in the bucket where the data was saved.
+
 ## `read_data_from_bucket()`
 Function to copy data from the Workspace Bucket into the disk. It supports dataframes, plots and more. The inputs are as follows:
 
@@ -40,7 +52,8 @@ Function to copy data from the Workspace Bucket into the disk. It supports dataf
      - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they will just be saved to the disk.
   - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data to be read is.
   - 'directory' (default = directory defined at initialization): A string; the bucket directory where your data was saved. 
-  - 'save_copy_in_disk' (default = True): boolean; if True, the file will be saved on the disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the disk. 
+  - 'save_copy_in_disk' (default = True): boolean; if True, the file will be saved on the disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the disk.
+  - 'disk_only' (default = False): Should the data be read into the disk only (and not the development environment)?
 For non-supported extensions 'save_copy_in_disk' has no effect. The file will be copied in the disk regardless.
     
 **OUTPUT**: A pandas dataframe or a plot image.
