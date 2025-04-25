@@ -1,7 +1,7 @@
 """
 Author: Aymone Jeanne Kouame
 Date Released: 03/26/2025
-Last Updated: 04/01/2025  
+Last Updated: 04/22/2025  
 """
 
 import pandas as pd
@@ -10,7 +10,6 @@ import subprocess
 from google.cloud import storage
 from google.api_core import exceptions
 from IPython.display import Image
-import pkg_resources
 
 class gc_data_storage:
     
@@ -45,10 +44,16 @@ class gc_data_storage:
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ README: How to use gc_data_storage?~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
+Author: Aymone Jeanne Kouame
+Date Released: 03/26/2025
+Last Updated: 04/21/2025  
+
 gc_data_storage lets you easily move data between your development environment (e.g. Jupyter Notebook) and your Google Cloud Workspace bucket. 
-It integrates the command line tool gsutil.
+It integrates the command line tool gcloud storage.
 
   * Use `save_data_to_bucket(data, filename)` to save data from your development environment to the bucket.
+  
+  * Use `save_to_xlworkbook(filename, sheets_dict = {{'sheet1':df1, 'sheet2':df2}})` to save an excel workbook (with multiple sheets) from your development environment to the bucket.
 
   * Use `read_data_to_bucket(filename)` to read data from the bucket into your development environment, with the option to keep a copy in the disk.
 
@@ -56,6 +61,8 @@ It integrates the command line tool gsutil.
 
   * Use `list_saved_data()` to obtain a list of data saved in the bucket or the disk.
 
+  * Use `delete_saved_data(directory, filename)` to delete data saved in the bucket or the disk. The default = 'bucket'. For the disk, `bucket_or_disk = 'disk'`. 
+  
 gc_data_storage was originally written to be used within the All of Us Researcher Workbench environment but can be used in other Google Cloud Environments.
 
     ```
@@ -79,10 +86,8 @@ More information, including examples, at https://github.com/AymoneKouame/google-
                             , index:bool = True
                             , dpi = 'figure'):
         
-        if bucket == None: 
-            bucket = self.bucket
-        if directory == None: 
-            directory = self.directory
+        if bucket == None: bucket = self.bucket
+        if directory == None: directory = self.directory
         
         self.error_handling(bucket)
         
@@ -101,39 +106,68 @@ More information, including examples, at https://github.com/AymoneKouame/google-
 
         if file_ext in df_extensions:
             if file_ext == '.tsv': 
+                print(f"""[Running command: `pd.DataFrame.to_csv(data, {full_filename}, sep="\\t")`]\n""")
                 pd.DataFrame.to_csv(data, full_filename, sep="\t")
+
             else: 
+                print(f"""[Running command: `{str(fun_dd[file_ext]).replace('<function NDFrame', 'pd.DataFrame').split(' at')[0]}(data, {full_filename}, index = {index})`]\n""")
                 fun_dd[file_ext](data, full_filename, index = index)
+
             print(f"Dataframe saved as '{filename}' in location.")
      
         elif file_ext in plot_extensions:   
-            data.savefig(filename, dpi = dpi)   
-            result = subprocess.run(["gsutil", "cp", filename, full_filename], capture_output=True, text=True)
+            data.savefig(filename, dpi = dpi)  
+            print(f"""[Running command: `gcloud storage cp {filename} {full_filename}`]\n""") 
+            result = subprocess.run(["gcloud", "storage", "cp", filename, full_filename], capture_output=True, text=True)
             print(result.stderr, result.stdout)
   
         else:
             print(f"""
     Your file extension is NOT in {df_extensions+plot_extensions}.
     We assume it is already saved to your disk.\n""")
-            result = subprocess.run(["gsutil", "cp", filename, full_filename], capture_output=True, text=True)
+            print(f"""[Running command: `gcloud storage cp {filename} {full_filename}`]\n""")
+            result = subprocess.run(["gcloud", "storage", "cp", filename, full_filename], capture_output=True, text=True)
             print(result.stderr, result.stdout)
+            
+            
+    def save_to_xlworkbook(self
+                           , filename
+                           , sheets_dict:dict = {}
+                           , index = True
+                           , bucket = None, directory = None
+                           , save_to_bucket = True):
+    
+        if '.' in filename: filename = filename.split('.')[0]+'.xlsx'
+        else: filename = filename+'.xlsx'
+        writer = pd.ExcelWriter(filename)
+        for sheetname, df in sheets_dict.items():
+            df.to_excel(writer, sheetname, index = index)
+        writer.close()
+
+        if save_to_bucket == True:
+            if bucket == None: bucket = self.bucket
+            if directory == None: directory = self.directory
+            full_filename = f'{bucket}/{directory}/{filename}'.replace('//','/').replace('gs:/','gs://')      
+            result = subprocess.run(["gcloud", "storage", "cp", filename, full_filename], capture_output=True, text=True)
+
+        else: full_filename =filename
+        print(f'{full_filename} saved.')
 
 
     def read_data_from_bucket(self
                               , filename
                               , bucket = None
                               , directory = None
-                              , save_copy_in_disk:bool = True):
+                              , save_copy_in_disk:bool = False
+                              , disk_only = False):
         
-        if bucket == None:
-            bucket = self.bucket
-        if directory == None:
-            directory = self.directory
+        if bucket == None: bucket = self.bucket
+        if directory == None: directory = self.directory
             
         self.error_handling(bucket)
         
         print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Reading data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Reading data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     From location =  '{bucket}/{directory}'
         """)
 
@@ -145,29 +179,40 @@ More information, including examples, at https://github.com/AymoneKouame/google-
 
         fun_dd = {'.csv': pd.read_csv, '.xlsx': pd.read_excel, '.parquet': pd.read_parquet}
 
-        if file_ext in df_extensions:
-            if file_ext == '.tsv': 
+        if (file_ext in df_extensions) & (disk_only == False):
+            if file_ext == '.tsv':
+                print(f"""[Running command: `pd.read_csv({full_filename}, sep="\\t")`]\n""") 
                 data = pd.read_csv(full_filename, sep="\t", engine = 'pyarrow')
-            else: 
+                
+            elif file_ext == '.xlsx':
+                print(f"""[Running command: `pd.read_excel({full_filename})`]\n""") 
+                data = fun_dd[file_ext](full_filename)
+
+            else:
+                print(f"""[Running command: `{str(fun_dd[file_ext]).replace('<function ', 'pd.').split(' at')[0]}({full_filename}, engine = 'pyarrow')`]\n""")
                 data = fun_dd[file_ext](full_filename, engine = 'pyarrow')
       
-        elif file_ext in plot_extensions:   
-            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)          
+        elif (file_ext in plot_extensions) & (disk_only == False):   
+            print(f"""[Running command: `gcloud storage cp {full_filename} {filename}`]\n""")     
+            result = subprocess.run(["gcloud", "storage", "cp", full_filename, filename], capture_output=True, text=True)
+     
             data = Image(filename)
             subprocess.run(["rm", filename], capture_output=True, text=True).stdout.strip("\n")
                 
-        elif file_ext not in df_extensions+plot_extensions:
-            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
+        elif (file_ext not in df_extensions+plot_extensions):
+
+            print(f"""[Running command: `gcloud storage cp {full_filename} {filename}`]\n""") 
+            result = subprocess.run(["gcloud", "storage", "cp", full_filename, filename], capture_output=True, text=True)
             data = '' 
             if result.returncode == 0: 
                 print(f'''
-    Your file extension is NOT in {df_extensions+plot_extensions}
-    It will just be copied to the disk.''')
+    Your file extension is NOT in {df_extensions+plot_extensions}. A copy of '{filename}' is in the disk.''')
 
-        if save_copy_in_disk == True:
-            result = subprocess.run(["gsutil", "cp", full_filename, filename], capture_output=True, text=True)
+        if (disk_only == True) or (save_copy_in_disk == True):
+            data = ''             
+            result = subprocess.run(["gcloud", "storage", "cp", full_filename, filename], capture_output=True, text=True)
             if result.returncode == 0:
-                print(f"'{filename}' is also in the disk.")               
+                print(f"A copy of '{filename}' is in the disk.")               
 
         return data
 
@@ -197,8 +242,11 @@ More information, including examples, at https://github.com/AymoneKouame/google-
     From {origin_fullfilename}
     To {dest_fullfilename}
         """)
-
-        subprocess.run(["gsutil", "cp", origin_fullfilename, dest_fullfilename])
+        print(f"""[Running command: `gcloud storage cp {origin_fullfilename} {dest_fullfilename}`]\n""") 
+        result = subprocess.run(["gcloud", "storage", "cp", origin_fullfilename, dest_fullfilename])
+        
+        if result.returncode == 0: 
+                print(f''' '{origin_fullfilename}' copied to {dest_fullfilename}.''')
 
 
     def list_saved_data(self
@@ -211,18 +259,58 @@ More information, including examples, at https://github.com/AymoneKouame/google-
              
         print(f"""
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Listing data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        """)
+    """)
         
         if (bucket_or_disk.lower()  in  ['bucket','']):
             if directory == None: directory = self.directory
             self.error_handling(bucket)
             location = f"{bucket}/{directory}/{pattern}".replace('//','/').replace('gs:/','gs://')            
-            print(f'In {location}\n')
-            subprocess.run(["gsutil", "ls", location])               
+            print(f'In {location}')
+            print(f"""[Running command: `gcloud storage ls {location}`]\n""") 
+            subprocess.run(["gcloud", "storage", "ls", location])
+               
                 
         elif (bucket_or_disk.lower() in ['persistent disk','persistent_disk', 'disk']) \
                 or (bucket_or_disk.lower() not in ['bucket','']) :
-            if directory == None: directory = ''
-            location = f"{directory}/{pattern}".replace('/*','')
-            print(f'In disk {location}\n\n')
+            if directory == None: location = pattern
+            else: location = f"{directory}/{pattern}"#.replace('//*','*')
+            
+            print(f'In disk {location}')
+            print(f"""[Running command: `os.system('ls {location}')`]\n""")  
             os.system(f'ls {location}')
+
+
+
+    def delete_saved_data(self, filename
+                          , bucket_or_disk = 'bucket'
+                          , bucket = None, directory = None):
+ 
+        if bucket == None or bucket == 'bucket': bucket = self.bucket
+        if directory == None: directory = self.directory
+        print(f"""
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Deleting data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Please USE WITH CAUTION.
+        """)
+        
+        if (bucket_or_disk.lower()  in  ['bucket','']):
+            self.error_handling(bucket)
+            location = f"{bucket}/{directory}/{filename}".replace('//','/').replace('gs:/','gs://')             
+            print(f'Deleting {location}')
+
+            delete_answer = input(f"PLEASE CONFIRM DELETION OF '{location}'. TYPE 'DELETE' then press ENTER.")
+            if delete_answer == 'DELETE':
+                print(f"""[Running command: `gcloud storage rm {location}`]\n""")
+                subprocess.run(["gcloud", "storage", "rm", location])
+            else: print('Deletion canceled.')
+                
+                
+        elif (bucket_or_disk.lower() in ['persistent disk','persistent_disk', 'disk']) \
+                or (bucket_or_disk.lower() not in ['bucket','']) :
+            location = f"{directory}/{filename}"
+            print(f'Deleting {location}')
+
+            delete_answer = input(f"PLEASE CONFIRM DELETION OF '{location}'. TYPE 'DELETE' then press ENTER.")
+            if delete_answer == 'DELETE':
+                print(f"""[Running command: `os.system('rm {location}')`]\n""")
+                os.system(f'rm {location}')
+            else: print('Deletion canceled.')
