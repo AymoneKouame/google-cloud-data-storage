@@ -21,8 +21,8 @@ The `GCPDataStorage` class is a comprehensive Python utility for managing data s
 
 ```python
 # Initialize storage manager
-storage = GCPDataStorage(bucket_name='my-analysis-bucket', directory='experiments')
-
+storage = GCPDataStorage(directory='experiments') #uses the default bucket_name in the environment. User can define a bucket name with the arg: bucket_name='my-analysis-bucket'
+                        
 # Save analysis results
 results_df = pd.DataFrame({'metric': ['accuracy', 'precision'], 'value': [0.95, 0.87]})
 storage.save_data_to_bucket(results_df, 'results.csv')
