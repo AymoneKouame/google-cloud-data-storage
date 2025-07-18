@@ -1,203 +1,446 @@
-# Description
-`gc_data_storage` lets you easily move data between your development environment (e.g. Jupyter Notebook) and your Google Cloud Workspace bucket. 
-It integrates the command line tool gsutil.
+# GCP Data Storage Manager Documentation
 
- * Save data from your development environment to the bucket.
- * Read data from the bucket into your development environment, with the option to keep a copy in the disk.
- * Copy data between different directories within the bucket or between two different buckets owned by the user.
- * Obtain a list of data saved in the bucket or the disk.
+## Overview
 
-`gc_data_storage` was originally written to be used within the All of Us Researcher Workbench environment but can be used in other Google Cloud Environments. 
+The `GCPDataStorage` class is a comprehensive Python utility for managing data storage between local environments and Google Cloud Storage (GCS) buckets. It provides a unified interface for saving, reading, and managing various data types including DataFrames, plots, images, and generic files.
 
- * At initialization, the default bucket used for all the functions below is the Workspace environment bucket and the default directory is the root.
- * The user can define another default bucket (format `gs//yourbucketname`) and/or another default directory to be used for all the functions below. 
+**Author:** Aymone Jeanne Kouame  
+**Date:** 2025-07-18  
+**Version:** 1.0
 
+## Features
 
-# Functions in the 'gc_data_storage' package.
+- **Universal GCP Compatibility**: Works across all GCP environments including All of Us Researcher Workbench, Google Colab, Vertex AI Workbench, and local development
+- **Auto-detection**: Automatically detects bucket names and project IDs from environment variables
+- **Multi-format Support**: Handles DataFrames, plots, images, Excel workbooks, and generic files
+- **Robust Error Handling**: Comprehensive logging and error management
+- **Flexible Path Management**: Supports both relative and absolute GCS paths
+- **Batch Operations**: Copy, list, and delete operations for file management
 
-## `save_data_to_bucket()`
-Function to save data from the development environment or the disk into the Workspace Bucket. The default bucket in the All of US Researcher Workbench). The user is free to add their own default bucket `gs//yourbucketname` upon initiating the function.
-The package supports dataframes, plots and more. The inputs are as follows:
+## Installation and Dependencies
 
-**INPUTS**
-  - **'data' (required)**: an object; the dataframe or plot to be saved. To save a file (e.g. .py, .text), use 'df = None'.
-     - For dataframes, the currently supported extensions: .csv, .tsv, .xlsx, .parquet. 
-     - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they need to be saved to the disk first.
-  - **'filename' (required)**: a string; the name of the file to save data, including file extension, in the bucket.
-  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where your data is to be saved.
-  - 'directory' (default = directory defined at initialization): a string; the bucket directory where you wish to save the data.
-  - 'index' (default = True): boolean; For dataframes, should the dataframe index be saved?
-  - 'dpi' (default = 'figure'): float or 'figure; For plots, what resolution? Floats should be in dots per inch. If 'figure', it will use the figure's dpi value.
-
-**OUTPUT**: A confirmation and location in the bucket where the data was saved.
-
-## `save_to_xlworkbook()`
-Function to save data from the development environment or the disk into the Workspace Bucket as an excel workbook (excel file with multiple sheets).
-
-**INPUTS**
-  - **'filename' (required)**: a string; the name of the excel workbook file to save data, including file extension .xlsx, in the bucket.
-  - **'sheets_dict' (required)**: a dictionary of format {'sheet1_name':df1, 'sheet2_name': df2} that specifies the dataframes and sheet names of the  workbook file.
-  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where your data is to be saved.
-  - 'directory' (default = directory defined at initialization): a string; the bucket directory where you wish to save the data.
-  - 'index' (default = True): boolean; should the dataframe index be saved?
-
-**OUTPUT**: A confirmation and location in the bucket where the data was saved.
-
-## `read_data_from_bucket()`
-Function to copy data from the Workspace Bucket into the disk. It supports dataframes, plots and more. The inputs are as follows:
-
-**INPUTS**
-  - **'filename' (required)**: A string; the name of the file in the bucket, including file extension.
-     - For dataframes, the currently supported extensions: .csv, .tsv, lsx, .parquet
-     - For plots, the currently supported extensions: .png, .jpeg, .bmp, .tiff, .pdf, .emf. Function can be used for other files but they will just be saved to the disk.
-  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data to be read is.
-  - 'directory' (default = directory defined at initialization): A string; the bucket directory where your data was saved. 
-  - 'save_copy_in_disk' (default = True): boolean; if True, the file will be saved on the disk as well. Otherwise, it will only be returned as a dataframe. There will be no copy in the disk.
-  - 'disk_only' (default = False): Should the data be read into the disk only (and not the development environment)?
-For non-supported extensions 'save_copy_in_disk' has no effect. The file will be copied in the disk regardless.
-    
-**OUTPUT**: A pandas dataframe or a plot image.
-
-
-## `copy_from_bucket_to_bucket()`
-Function to copy data saved from Bucket to the same bucket or another bucket. If the buckets are different, the user must be owner of both workspaces.
-
-**INPUTS**
-  - **'origin_filename' (required)**: A string; the name of the file (with extension, for example 'example.csv') to be copied from the original bucket to the destination bucket. 
-     - Can be any data type (e.g dataframe, plot, text file, script, etc.)
-  - **'destination_bucket' (required)**: A string; the name of the bucket to copy the data to (format: 'gs://destination-bucket-name').
-  - 'origin_bucket' (default = bucket defined at initialization): A string; the name of the bucket where the data to copy is located (format: 'gs://destination-bucket-name').
-  - 'origin_directory' (default = directory defined at initialization): A string; the name of the directory within the origin bucket where the data to copy is located.
-  - 'destination_directory' (default = same name as directory defined at initialization): A string; the name of the directory within the destination bucket where the data is to be copied.
-  - 'destination_filename' (Default = 'origin_filename'). A string; The new name of the file in the destination bucket.
-
-**OUTPUT**: A confirmation and location of the data copied.
-
-
-## `list_saved_data()`
-Function to list data saved in the workspace bucket or in the disk. The inputs are as follows:
-
-**INPUTS**
-  - 'bucket_or_disk' (default = 'bucket'): A string; list data in the bucket or the disk? Enter 'bucket' or 'disk'.
-  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data is to list is.
-  - 'directory': A string. Which directory to use? If bucket_or_disk = 'bucket', the default is directory defined at initialization. If bucket_or_disk = 'disk', the default directory is the root disk directory.
-  - 'pattern' (default = '*') which pattern to use for the files to be listed?
-
-**OUTPUT**: List of files in the specified bucket or disk location.
-
-## `delete_saved_data()`
-Function to list data saved in the workspace bucket or in the disk. The inputs are as follows:
-
-**INPUTS**
-  - **'filename' (required)**: A string; the name of the file in the bucket or disk to delete, including file extension.
-  - 'bucket_or_disk' (default = 'bucket'): A string; Is the data located in the bucket or the disk? Enter 'bucket' or 'disk'.
-  - 'bucket' (default = bucket defined at initialization): A string of format `gs//yourbucketname` defining the bucket where the data is to list is.
-  - 'directory': A string. Which directory to use? If bucket_or_disk = 'bucket', the default is directory defined at initialization. If bucket_or_disk = 'disk', the default directory is the root disk directory.
-
-**OUTPUT**: List of files in the specified bucket or disk location.
-
-# Using `gc_data_storage` 
-
-### How to install the package?
-```
-pip install gc_data_storage
+```python
+# Required dependencies
+import pandas as pd
+import os
+import subprocess
+import logging
+from pathlib import Path
+from typing import Dict, Optional, Union, Any
+from google.cloud import storage
+from google.api_core import exceptions
+from IPython.display import Image, display
+import tempfile
+import shutil
 ```
 
-## Saving data - examples
+## Quick Start
 
-Initialization: Using the default bucket and root bucket directory in the All of Us Resercher Workbecnch
-```
-from gc_data_storage import gc_data_storage as gs
-gs = gs()
-```
+### Basic Initialization
 
-OR Initialization: Using another default Google Cloud Workspace Bucket and/or directory
-```
-from gc_data_storage import gc_data_storage as gs
-gs  = gs(bucket = 'gs://your-bucket-name', directory = 'data')
-```
-### Saving a dataframe to the Google Cloud bucket
-Saving 'df' as 'example.csv' in the default bucket and directory.
+```python
+# Auto-detect bucket from environment variables
+storage = GCPDataStorage()
 
-```
-gs.save_data_to_bucket(data =df, filename = 'example.csv')
-```
+# Specify bucket explicitly
+storage = GCPDataStorage(bucket_name='my-bucket')
 
-Saving 'df' as 'example.csv' in the default bucket without index under the 'data/shared' directory.
-
-```
-gs.save_data_to_bucket(data = df, filename = 'example.tsv', directory= 'data/user1', index = False)
+# With custom directory and project
+storage = GCPDataStorage(
+    bucket_name='my-bucket',
+    directory='data/experiments',
+    project_id='my-project'
+)
 ```
 
-### Saving a plot to the Google Cloud bucket
-Saving 'plot1' as 'plot1.jpeg' in the default bucket and directory.
+### Environment Auto-Detection
 
-```
-gs.save_data_to_bucket(data = plot1, filename = 'plot1.jpeg')
-```
+The class automatically detects configuration from these environment variables:
 
-### Saving other data types to the Google Cloud bucket
-Saving 'fake_file.text' in the default bucket under the 'data/user1' directory.
+**Bucket Detection:**
+- `WORKSPACE_BUCKET`
+- `GCS_BUCKET`
+- `GOOGLE_CLOUD_BUCKET`
+- `BUCKET_NAME`
 
-```
-gs.save_data_to_bucket(data = None, filename = 'fake_file.txt', directory= 'data/user1')
-```
+**Project Detection:**
+- `GOOGLE_CLOUD_PROJECT`
+- `GCP_PROJECT`
+- `PROJECT_ID`
 
+## API Reference
 
-## Reading data - examples
+### Constructor
 
-Reading data from the bucket as a dataframe from the default bucket and directory. By default a copy will be also be saved in the disk.
-
-```
-df1 = gs.read_data_from_bucket('example.csv')
-```
-
-```
-plot1 = gs.read_data_from_bucket('plot1.jpeg')
+```python
+GCPDataStorage(bucket_name=None, directory='', project_id=None)
 ```
 
-Reading data saved under the 'data/user1' directory. We do not want a copy in the disk
+**Parameters:**
+- `bucket_name` (str, optional): GCS bucket name. Auto-detected if None
+- `directory` (str, optional): Default directory within bucket
+- `project_id` (str, optional): GCP project ID. Auto-detected if None
 
-```
-df2 = gs.read_data_from_bucket('example.tsv', directory = 'data/user1', keep_copy_in_disk=False)
-```
+### Core Methods
 
-## Listing data - examples
+#### save_data_to_bucket()
 
-List all the files in the default bucket and directory
+Save various data types to GCS bucket.
 
-```
-gs.list_saved_data()
-```
-
-List all the files in another bucket and directory
-
-```
-gs.list_saved_data(bucket = 'gs://other-bucket-name', directory = 'otherdirectory')
-```
-
-List all the csv files in the bucket directory 'data/user1'.
-
-```
-gs.list_saved_data(directory='data/user1', pattern = '*csv')
+```python
+save_data_to_bucket(
+    data,
+    filename,
+    bucket_name=None,
+    directory=None,
+    index=True,
+    dpi='figure',
+    **kwargs
+) -> bool
 ```
 
-List all the files in the root disk.
+**Parameters:**
+- `data`: Data to save (DataFrame, plot, string, bytes, etc.)
+- `filename` (str): Target filename
+- `bucket_name` (str, optional): Override default bucket
+- `directory` (str, optional): Override default directory
+- `index` (bool): Include index for DataFrames (default: True)
+- `dpi` (str/int): DPI for plot saves (default: 'figure')
+- `**kwargs`: Additional arguments for save functions
 
-```
-gs.list_saved_data(bucket_or_disk = 'disk')
+**Returns:** `bool` - True if successful
+
+**Examples:**
+```python
+# Save DataFrame
+success = storage.save_data_to_bucket(df, 'data.csv')
+
+# Save plot with custom DPI
+success = storage.save_data_to_bucket(plt.gcf(), 'plot.png', dpi=300)
+
+# Save to specific directory
+success = storage.save_data_to_bucket(df, 'results.xlsx', directory='experiments')
+
+# Save with custom parameters
+success = storage.save_data_to_bucket(df, 'data.csv', index=False, encoding='utf-8')
 ```
 
-## Copy data from bucket to bucket - examples
-Copy data from the default bucket and directory to another bucket. The file will be saved under the same name, in a directory with the same name as the default directory.
+#### read_data_from_bucket()
 
-```
-gs.copy_from_bucket_to_bucket(origin_filename = 'example.csv', destination_bucket = "gs://destination-bucket-name")
+Read data from GCS bucket.
+
+```python
+read_data_from_bucket(
+    filename,
+    bucket_name=None,
+    directory=None,
+    save_copy_locally=False,
+    local_only=False,
+    **kwargs
+) -> Any
 ```
 
-Copy data from the default bucket but the 'data' directory' to another bucket under the 'data2' directory. We also want to change the filename to 'example2.csv' in the destination bucket.
+**Parameters:**
+- `filename` (str): File to read
+- `bucket_name` (str, optional): Override default bucket
+- `directory` (str, optional): Override default directory
+- `save_copy_locally` (bool): Save a local copy (default: False)
+- `local_only` (bool): Only download, don't load into memory (default: False)
+- `**kwargs`: Additional arguments for read functions
 
+**Returns:** Loaded data or None if error
+
+**Examples:**
+```python
+# Read DataFrame
+df = storage.read_data_from_bucket('data.csv')
+
+# Read and save local copy
+df = storage.read_data_from_bucket('data.csv', save_copy_locally=True)
+
+# Just download file
+storage.read_data_from_bucket('data.csv', local_only=True)
+
+# Read with custom parameters
+df = storage.read_data_from_bucket('data.csv', sep=';', encoding='utf-8')
 ```
-gs.copy_from_bucket_to_bucket(origin_filename = 'example.csv', origin_directory = 'data'
-                             , destination_bucket = "gs://destination-bucket-name", destination_directory = 'data2', destination_filename = 'example2.csv')
+
+#### save_excel_workbook()
+
+Save multiple DataFrames as Excel workbook with multiple sheets.
+
+```python
+save_excel_workbook(
+    sheets_dict,
+    filename,
+    bucket_name=None,
+    directory=None,
+    index=True,
+    **kwargs
+) -> bool
 ```
+
+**Parameters:**
+- `sheets_dict` (dict): Dictionary of {sheet_name: DataFrame}
+- `filename` (str): Excel filename
+- `bucket_name` (str, optional): Override default bucket
+- `directory` (str, optional): Override default directory
+- `index` (bool): Include index (default: True)
+- `**kwargs`: Additional arguments for to_excel
+
+**Example:**
+```python
+# Create workbook with multiple sheets
+sheets = {
+    'summary': summary_df,
+    'details': details_df,
+    'analysis': analysis_df
+}
+success = storage.save_excel_workbook(sheets, 'report.xlsx')
+```
+
+### File Management Methods
+
+#### list_files()
+
+List files in GCS bucket.
+
+```python
+list_files(
+    pattern='*',
+    bucket_name=None,
+    directory=None,
+    recursive=False
+) -> list
+```
+
+**Example:**
+```python
+# List all CSV files
+csv_files = storage.list_files('*.csv')
+
+# List files recursively
+all_files = storage.list_files('*', recursive=True)
+
+# List files in specific directory
+files = storage.list_files('data_*', directory='experiments')
+```
+
+#### copy_between_buckets()
+
+Copy data between GCS locations.
+
+```python
+copy_between_buckets(source_path, destination_path) -> bool
+```
+
+**Example:**
+```python
+# Copy within same bucket
+storage.copy_between_buckets('old_data.csv', 'backup/old_data.csv')
+
+# Copy between buckets
+storage.copy_between_buckets(
+    'gs://source-bucket/data.csv',
+    'gs://dest-bucket/data.csv'
+)
+```
+
+#### delete_file()
+
+Delete file from GCS bucket.
+
+```python
+delete_file(
+    filename,
+    bucket_name=None,
+    directory=None,
+    confirm=True
+) -> bool
+```
+
+**Example:**
+```python
+# Delete with confirmation
+storage.delete_file('old_file.csv')
+
+# Delete without confirmation
+storage.delete_file('temp_file.csv', confirm=False)
+```
+
+#### get_file_info()
+
+Get information about a file in GCS.
+
+```python
+get_file_info(
+    filename,
+    partial_string=False,
+    bucket_name=None,
+    directory=None
+) -> Optional[Dict]
+```
+
+**Example:**
+```python
+# Get info for exact filename
+info = storage.get_file_info('data.csv')
+
+# Search with partial filename
+info = storage.get_file_info('experiment', partial_string=True)
+```
+
+## Supported File Formats
+
+### DataFrames
+- **CSV** (`.csv`): Standard comma-separated values
+- **TSV** (`.tsv`): Tab-separated values
+- **Excel** (`.xlsx`): Microsoft Excel format
+- **Parquet** (`.parquet`): Columnar storage format
+- **JSON** (`.json`): JavaScript Object Notation
+
+### Images and Plots
+- **PNG** (`.png`): Portable Network Graphics
+- **JPEG** (`.jpg`, `.jpeg`): Joint Photographic Experts Group
+- **PDF** (`.pdf`): Portable Document Format
+- **SVG** (`.svg`): Scalable Vector Graphics
+- **EPS** (`.eps`): Encapsulated PostScript
+- **TIFF** (`.tiff`): Tagged Image File Format
+
+### Generic Files
+- Any file type supported through binary handling
+
+## Usage Examples
+
+### Complete Workflow Example
+
+```python
+# Initialize storage manager
+storage = GCPDataStorage(bucket_name='my-analysis-bucket', directory='experiments')
+
+# Save analysis results
+results_df = pd.DataFrame({'metric': ['accuracy', 'precision'], 'value': [0.95, 0.87]})
+storage.save_data_to_bucket(results_df, 'results.csv')
+
+# Save visualization
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
+plt.title('Analysis Results')
+storage.save_data_to_bucket(plt.gcf(), 'analysis_plot.png', dpi=300)
+
+# Create multi-sheet Excel report
+sheets = {
+    'Summary': results_df,
+    'Raw Data': raw_data_df,
+    'Metadata': metadata_df
+}
+storage.save_excel_workbook(sheets, 'comprehensive_report.xlsx')
+
+# List all files
+files = storage.list_files('*')
+print(f"Total files: {len(files)}")
+
+# Read data back
+loaded_df = storage.read_data_from_bucket('results.csv')
+print(loaded_df.head())
+```
+
+### Error Handling Best Practices
+
+```python
+# Always check return values
+if storage.save_data_to_bucket(df, 'important_data.csv'):
+    print("Data saved successfully")
+else:
+    print("Failed to save data")
+
+# Handle None returns from read operations
+data = storage.read_data_from_bucket('data.csv')
+if data is not None:
+    print(f"Loaded {len(data)} rows")
+else:
+    print("Failed to load data")
+```
+
+## Environment-Specific Usage
+
+### All of Us Researcher Workbench
+```python
+# Usually auto-detects from WORKSPACE_BUCKET
+storage = GCPDataStorage()
+```
+
+### Google Colab
+```python
+# May need to authenticate first
+from google.colab import auth
+auth.authenticate_user()
+storage = GCPDataStorage(bucket_name='your-bucket')
+```
+
+### Local Development
+```python
+# Ensure gcloud is configured
+# gcloud auth application-default login
+storage = GCPDataStorage(bucket_name='your-bucket', project_id='your-project')
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Bucket Access Denied**
+   - Ensure proper IAM permissions
+   - Check bucket name spelling
+   - Verify authentication
+
+2. **Auto-detection Failures**
+   - Set environment variables explicitly
+   - Pass parameters to constructor
+
+3. **File Format Errors**
+   - Check file extensions
+   - Verify data types match expected formats
+
+4. **Network Issues**
+   - Check internet connectivity
+   - Verify GCS endpoint accessibility
+
+### Debug Mode
+
+Enable detailed logging:
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+storage = GCPDataStorage()
+```
+
+## Security Considerations
+
+- Never hardcode credentials in code
+- Use IAM roles and service accounts
+- Implement least-privilege access
+- Monitor bucket access logs
+- Use encryption for sensitive data
+
+## Performance Tips
+
+- Use Parquet format for large DataFrames
+- Batch operations when possible
+- Consider data compression
+- Use appropriate file formats for your use case
+- Monitor storage costs and usage
+
+## Contributing
+
+This tool is designed for extensibility. To add new file format support:
+
+1. Add format detection logic in save/read methods
+2. Implement format-specific handlers
+3. Update supported formats documentation
+4. Add appropriate error handling
+
+## License
+
+This code is provided as-is for educational and research purposes. Please ensure compliance with your organization's policies when using in production environments.
