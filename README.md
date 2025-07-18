@@ -52,6 +52,13 @@ print(f"Total files: {len(files)}")
 loaded_df = storage.read_data_from_bucket('results.csv')
 print(loaded_df.head())
 
+# Get File Info
+## Using the full location name - if known
+info = storage.get_file_info('gs://my-analysis-bucket/experiments/analysis_plot.png')
+
+## Using a partial string
+info = storage.get_file_info('plot', partial_string = True)
+
 ```
 
 ## Installation and Dependencies
