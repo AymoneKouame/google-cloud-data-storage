@@ -1,10 +1,10 @@
-Functions in the 'gc-data-storage' package.
+Main Functions in the 'gc-data-storage' package.
 - save_data_to_bucket()
 - read_data_from_bucket()
+- copy_between_buckets()
 - list_files()
 - delete_file()
-- copy_between_buckets()
-- copy_between_buckets()
+- get_file_info()
 
 Using the package
 
