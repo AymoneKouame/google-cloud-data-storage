@@ -6,7 +6,7 @@ The `GCPDataStorage` class is a comprehensive Python utility for managing data s
 
 **Author:** Aymone Jeanne Kouame  
 **Date:** 2025-07-18  
-**Version:** 1.0
+**Version:** 3.0.0
 
 ## Features
 
