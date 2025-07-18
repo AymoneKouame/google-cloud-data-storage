@@ -1,316 +1,697 @@
 """
+Improved GCP Data Storage Manager
 Author: Aymone Jeanne Kouame
-Date Released: 03/26/2025
-Last Updated: 04/22/2025  
+Date: 2025-07-18
 """
 
 import pandas as pd
 import os
 import subprocess
+import logging
+from pathlib import Path
+from typing import Dict, Optional, Union, Any
 from google.cloud import storage
 from google.api_core import exceptions
-from IPython.display import Image
+from IPython.display import Image, display
+import tempfile
+import shutil
 
-class gc_data_storage:
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class GCPDataStorage:
+    """
+    A comprehensive class for managing data storage between local environment 
+    and Google Cloud Storage buckets.
     
-    def __init__(self, bucket = os.getenv('WORKSPACE_BUCKET'), directory = ''):
-
-        self.bucket = bucket
-        self.directory = directory
+    Works in any GCP environment including:
+    - All of Us Researcher Workbench
+    - Google Colab
+    - Vertex AI Workbench
+    - Local development with GCP credentials
+    - Any GCP Compute instance
+    """
+    
+    def __init__(self, bucket_name: Optional[str] = None, directory: str = '', 
+                 project_id: Optional[str] = None):
+        """
+        Initialize the GCP Data Storage manager.
         
-    def error_handling(self, bucket_id):
-
-        bucket_name = bucket_id.replace('gs://','')
+        Args:
+            bucket_name: GCS bucket name. If None, attempts to auto-detect from environment
+            directory: Default directory within bucket
+            project_id: GCP project ID. If None, attempts to auto-detect
+        """
+        self.bucket_name = self._resolve_bucket_name(bucket_name)
+        self.directory = directory.strip('/')
+        self.project_id = self._resolve_project_id(project_id)
+        
+        # Initialize storage client
         try:
-            storage.Client().bucket(bucket_name).exists()
-        except exceptions.Forbidden as err:
-            print(f"Forbidden error for '{bucket_name}':", err)
-            print(f"Please enter the correct bucket name.\n")
-        except exceptions.Unauthorized as err:
-            print(f"Unauthorized error for '{bucket_name}':", err)
-            print(f"Please enter the correct bucket name.\n")
-        except exceptions.NotFound as err:
-            print(f"NotFound error for '{bucket_name}':", err)
-            print(f"Please enter the correct bucket name.\n")
-        except ValueError as err:
-            print(f"ValueError error for '{bucket_name}':", err)
-            print(f"Please enter the correct bucket name.\n")
-        except FileNotFoundError as err:
-            print(f"FileNotFoundError error for '{bucket_name}':", err)
-            print(f"Please enter the correct bucket name and/or filename.")            
+            self.client = storage.Client(project=self.project_id)
+        except Exception as e:
+            logger.warning(f"Could not initialize storage client: {e}")
+            self.client = None
+            
+        logger.info(f"Initialized GCPDataStorage:")
+        logger.info(f"  - Bucket: {self.bucket_name}")
+        logger.info(f"  - Directory: {self.directory}")
+        logger.info(f"  - Project: {self.project_id}")
     
-    def README(self):
+    def _resolve_bucket_name(self, bucket_name: Optional[str]) -> str:
+        """Auto-detect bucket name from environment if not provided."""
+        if bucket_name:
+            return bucket_name.replace('gs://', '')
         
-        print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ README: How to use gc_data_storage?~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
-Author: Aymone Jeanne Kouame
-Date Released: 03/26/2025
-Last Updated: 04/21/2025  
-
-gc_data_storage lets you easily move data between your development environment (e.g. Jupyter Notebook) and your Google Cloud Workspace bucket. 
-It integrates the command line tool gcloud storage.
-
-  * Use `save_data_to_bucket(data, filename)` to save data from your development environment to the bucket.
-  
-  * Use `save_to_xlworkbook(filename, sheets_dict = {{'sheet1':df1, 'sheet2':df2}})` to save an excel workbook (with multiple sheets) from your development environment to the bucket.
-
-  * Use `read_data_to_bucket(filename)` to read data from the bucket into your development environment, with the option to keep a copy in the disk.
-
-  * Use `copy_from_bucket_to_bucket(origin_filename, destination_bucket)` to copy data between different directories within the same bucket or between two different buckets owned by the user.
-
-  * Use `list_saved_data()` to obtain a list of data saved in the bucket or the disk.
-
-  * Use `delete_saved_data(directory, filename)` to delete data saved in the bucket or the disk. The default = 'bucket'. For the disk, `bucket_or_disk = 'disk'`. 
-  
-gc_data_storage was originally written to be used within the All of Us Researcher Workbench environment but can be used in other Google Cloud Environments.
-
-    ```
-    # Example code
-    from gc_data_storage import gc_data_storage as gs
-
-    ## initialize (when initializing,  use the default All of US Researcher workbench bucket or input your own.
-    gs = gs()
-
-    ## list data in the bucket root directory 
-    gs.list_saved_data()
-    ```
-More information, including examples, at https://github.com/AymoneKouame/google-cloud-data-storage/ .
-
-        """)    
-
-    def save_data_to_bucket(self
-                            , data, filename
-                            , bucket = None
-                            , directory = None
-                            , index:bool = True
-                            , dpi = 'figure'):
+        # Try common environment variables
+        env_vars = [
+            'WORKSPACE_BUCKET',
+            'GCS_BUCKET',
+            'GOOGLE_CLOUD_BUCKET',
+            'BUCKET_NAME'
+        ]
         
-        if bucket == None: bucket = self.bucket
-        if directory == None: directory = self.directory
+        for var in env_vars:
+            bucket = os.getenv(var)
+            if bucket:
+                return bucket.replace('gs://', '')
         
-        self.error_handling(bucket)
+        # Try to get from gcloud config
+        try:
+            result = subprocess.run(
+                ['gcloud', 'config', 'get-value', 'storage/bucket'],
+                capture_output=True, text=True, check=True
+            )
+            if result.stdout.strip():
+                return result.stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
         
-        print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Saving data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    To location =  '{bucket}/{directory}'
-        """)
-
-        full_filename = f'{bucket}/{directory}/{filename}'.replace('//','/').replace('gs:/','gs://')      
-        file_ext = '.'+filename.split('.')[1].lower()
-
-        fun_dd = {'.csv': pd.DataFrame.to_csv , '.xlsx': pd.DataFrame.to_excel, '.parquet': pd.DataFrame.to_parquet}
-
-        df_extensions = ['.csv', '.xlsx', '.tsv', '.parquet']
-        plot_extensions = ['.png', '.jpeg', '.bmp', '.tiff', '.pdf', '.emf']
-
-        if file_ext in df_extensions:
-            if file_ext == '.tsv': 
-                print(f"""[Running command: `pd.DataFrame.to_csv(data, {full_filename}, sep="\\t")`]\n""")
-                pd.DataFrame.to_csv(data, full_filename, sep="\t")
-
-            else: 
-                print(f"""[Running command: `{str(fun_dd[file_ext]).replace('<function NDFrame', 'pd.DataFrame').split(' at')[0]}(data, {full_filename}, index = {index})`]\n""")
-                fun_dd[file_ext](data, full_filename, index = index)
-
-            print(f"Dataframe saved as '{filename}' in location.")
-     
-        elif file_ext in plot_extensions:   
-            data.savefig(filename, dpi = dpi)  
-            print(f"""[Running command: `gcloud storage cp {filename} {full_filename}`]\n""") 
-            result = subprocess.run(["gcloud", "storage", "cp", filename, full_filename], capture_output=True, text=True)
-            print(result.stderr, result.stdout)
-  
-        else:
-            print(f"""
-    Your file extension is NOT in {df_extensions+plot_extensions}.
-    We assume it is already saved to your disk.\n""")
-            print(f"""[Running command: `gcloud storage cp {filename} {full_filename}`]\n""")
-            result = subprocess.run(["gcloud", "storage", "cp", filename, full_filename], capture_output=True, text=True)
-            print(result.stderr, result.stdout)
-            
-            
-    def save_to_xlworkbook(self
-                           , filename
-                           , sheets_dict:dict = {}
-                           , index = True
-                           , bucket = None, directory = None
-                           , save_to_bucket = True):
+        raise ValueError(
+            "No bucket name provided and could not auto-detect from environment. "
+            "Please provide bucket_name parameter or set WORKSPACE_BUCKET environment variable."
+        )
     
-        if '.' in filename: filename = filename.split('.')[0]+'.xlsx'
-        else: filename = filename+'.xlsx'
-        writer = pd.ExcelWriter(filename)
-        for sheetname, df in sheets_dict.items():
-            df.to_excel(writer, sheetname, index = index)
-        writer.close()
-
-        if save_to_bucket == True:
-            if bucket == None: bucket = self.bucket
-            if directory == None: directory = self.directory
-            full_filename = f'{bucket}/{directory}/{filename}'.replace('//','/').replace('gs:/','gs://')      
-            result = subprocess.run(["gcloud", "storage", "cp", filename, full_filename], capture_output=True, text=True)
-
-        else: full_filename =filename
-        print(f'{full_filename} saved.')
-
-
-    def read_data_from_bucket(self
-                              , filename
-                              , bucket = None
-                              , directory = None
-                              , save_copy_in_disk:bool = False
-                              , disk_only = False):
+    def _resolve_project_id(self, project_id: Optional[str]) -> Optional[str]:
+        """Auto-detect project ID from environment if not provided."""
+        if project_id:
+            return project_id
         
-        if bucket == None: bucket = self.bucket
-        if directory == None: directory = self.directory
-            
-        self.error_handling(bucket)
+        # Try environment variables
+        env_vars = ['GOOGLE_CLOUD_PROJECT', 'GCP_PROJECT', 'PROJECT_ID']
+        for var in env_vars:
+            project = os.getenv(var)
+            if project:
+                return project
         
-        print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Reading data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    From location =  '{bucket}/{directory}'
-        """)
-
-        full_filename = f'{bucket}/{directory}/{filename}'.replace('//','/').replace('gs:/','gs://')  
-        file_ext = '.'+filename.split('.')[1].lower()
-
-        df_extensions = ['.csv', '.xlsx', '.tsv', '.parquet']
-        plot_extensions = ['.png', '.jpeg', '.bmp', '.tiff', '.pdf', '.emf']
-
-        fun_dd = {'.csv': pd.read_csv, '.xlsx': pd.read_excel, '.parquet': pd.read_parquet}
-
-        if (file_ext in df_extensions) & (disk_only == False):
-            if file_ext == '.tsv':
-                print(f"""[Running command: `pd.read_csv({full_filename}, sep="\\t")`]\n""") 
-                data = pd.read_csv(full_filename, sep="\t", engine = 'pyarrow')
-                
-            elif file_ext == '.xlsx':
-                print(f"""[Running command: `pd.read_excel({full_filename})`]\n""") 
-                data = fun_dd[file_ext](full_filename)
-
+        # Try to get from gcloud config
+        try:
+            result = subprocess.run(
+                ['gcloud', 'config', 'get-value', 'project'],
+                capture_output=True, text=True, check=True
+            )
+            if result.stdout.strip():
+                return result.stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+        
+        return None
+    
+    def _validate_bucket_access(self, bucket_name: str) -> bool:
+        """Validate that the bucket exists and is accessible."""
+        try:
+            if self.client:
+                bucket = self.client.bucket(bucket_name)
+                bucket.exists()
+                return True
             else:
-                print(f"""[Running command: `{str(fun_dd[file_ext]).replace('<function ', 'pd.').split(' at')[0]}({full_filename}, engine = 'pyarrow')`]\n""")
-                data = fun_dd[file_ext](full_filename, engine = 'pyarrow')
-      
-        elif (file_ext in plot_extensions) & (disk_only == False):   
-            print(f"""[Running command: `gcloud storage cp {full_filename} {filename}`]\n""")     
-            result = subprocess.run(["gcloud", "storage", "cp", full_filename, filename], capture_output=True, text=True)
-     
-            data = Image(filename)
-            subprocess.run(["rm", filename], capture_output=True, text=True).stdout.strip("\n")
-                
-        elif (file_ext not in df_extensions+plot_extensions):
-
-            print(f"""[Running command: `gcloud storage cp {full_filename} {filename}`]\n""") 
-            result = subprocess.run(["gcloud", "storage", "cp", full_filename, filename], capture_output=True, text=True)
-            data = '' 
-            if result.returncode == 0: 
-                print(f'''
-    Your file extension is NOT in {df_extensions+plot_extensions}. A copy of '{filename}' is in the disk.''')
-
-        if (disk_only == True) or (save_copy_in_disk == True):
-            data = ''             
-            result = subprocess.run(["gcloud", "storage", "cp", full_filename, filename], capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"A copy of '{filename}' is in the disk.")               
-
-        return data
-
-    def copy_from_bucket_to_bucket(self
-                                   , origin_filename
-                                   , destination_bucket
-                                   , origin_bucket = None
-                                   , origin_directory = None
-                                   , destination_directory = None
-                                   , destination_filename = None
-                                   ):
+                # Fallback to gcloud command
+                result = subprocess.run(
+                    ['gcloud', 'storage', 'ls', f'gs://{bucket_name}'],
+                    capture_output=True, text=True
+                )
+                return result.returncode == 0
+        except exceptions.Forbidden:
+            logger.error(f"Access denied to bucket '{bucket_name}'. Check permissions.")
+            return False
+        except exceptions.NotFound:
+            logger.error(f"Bucket '{bucket_name}' not found.")
+            return False
+        except Exception as e:
+            logger.error(f"Error validating bucket access: {e}")
+            return False
+    
+    def _construct_gcs_path(self, filename: str, bucket_name: Optional[str] = None, 
+                           directory: Optional[str] = None) -> str:
+        """Construct a full GCS path."""
+        bucket = bucket_name or self.bucket_name
+        dir_path = directory if directory is not None else self.directory
         
-        if destination_filename == None: destination_filename = origin_filename
-        if origin_bucket == None: origin_bucket = self.bucket
-        if origin_directory == None: origin_directory = self.directory
-        if destination_directory == None: destination_directory = self.directory
-       
-        self.error_handling(origin_bucket)
-        self.error_handling(destination_bucket)
+        if filename.startswith('gs://'):
+            return filename
         
+        # Clean up path components
+        bucket = bucket.replace('gs://', '')
+        dir_path = dir_path.strip('/')
+        filename = filename.strip('/')
         
-        origin_fullfilename = f"{origin_bucket}/{origin_directory}/{origin_filename}".replace('//','/').replace('gs:/','gs://')  
-        dest_fullfilename = f"{destination_bucket}/{destination_directory}/{destination_filename}".replace('//','/').replace('gs:/','gs://')  
-
-        print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ copying data between buckets ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    From {origin_fullfilename}
-    To {dest_fullfilename}
-        """)
-        print(f"""[Running command: `gcloud storage cp {origin_fullfilename} {dest_fullfilename}`]\n""") 
-        result = subprocess.run(["gcloud", "storage", "cp", origin_fullfilename, dest_fullfilename])
+        if dir_path:
+            return f'gs://{bucket}/{dir_path}/{filename}'
+        else:
+            return f'gs://{bucket}/{filename}'
+    
+    def save_data_to_bucket(self, data: Any, filename: str, 
+                           bucket_name: Optional[str] = None,
+                           directory: Optional[str] = None,
+                           index: bool = True, dpi: Union[str, int] = 'figure',
+                           **kwargs) -> bool:
+        """
+        Save data to GCS bucket with support for various data types.
         
-        if result.returncode == 0: 
-                print(f''' '{origin_fullfilename}' copied to {dest_fullfilename}.''')
-
-
-    def list_saved_data(self
-                        , bucket_or_disk = 'bucket'
-                        , bucket = None
-                        , directory = None
-                        , pattern = '*'):
- 
-        if bucket == None or bucket == 'bucket': bucket = self.bucket
-             
-        print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Listing data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """)
-        
-        if (bucket_or_disk.lower()  in  ['bucket','']):
-            if directory == None: directory = self.directory
-            self.error_handling(bucket)
-            location = f"{bucket}/{directory}/{pattern}".replace('//','/').replace('gs:/','gs://')            
-            print(f'In {location}')
-            print(f"""[Running command: `gcloud storage ls {location}`]\n""") 
-            subprocess.run(["gcloud", "storage", "ls", location])
-               
-                
-        elif (bucket_or_disk.lower() in ['persistent disk','persistent_disk', 'disk']) \
-                or (bucket_or_disk.lower() not in ['bucket','']) :
-            if directory == None: location = pattern
-            else: location = f"{directory}/{pattern}"#.replace('//*','*')
+        Args:
+            data: Data to save (DataFrame, plot, etc.)
+            filename: Target filename
+            bucket_name: Override default bucket
+            directory: Override default directory
+            index: Whether to include index for DataFrames
+            dpi: DPI for plot saves
+            **kwargs: Additional arguments passed to save functions
             
-            print(f'In disk {location}')
-            print(f"""[Running command: `os.system('ls {location}')`]\n""")  
-            os.system(f'ls {location}')
-
-
-
-    def delete_saved_data(self, filename
-                          , bucket_or_disk = 'bucket'
-                          , bucket = None, directory = None):
- 
-        if bucket == None or bucket == 'bucket': bucket = self.bucket
-        if directory == None: directory = self.directory
-        print(f"""
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Deleting data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Please USE WITH CAUTION.
-        """)
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        gcs_path = self._construct_gcs_path(filename, bucket_name, directory)
         
-        if (bucket_or_disk.lower()  in  ['bucket','']):
-            self.error_handling(bucket)
-            location = f"{bucket}/{directory}/{filename}".replace('//','/').replace('gs:/','gs://')             
-            print(f'Deleting {location}')
+        if not self._validate_bucket_access(gcs_path.split('/')[2]):
+            return False
+        
+        logger.info(f"Saving data to: {gcs_path}")
+        
+        try:
+            file_ext = Path(filename).suffix.lower()
+            
+            # Handle DataFrames
+            if isinstance(data, pd.DataFrame):
+                return self._save_dataframe(data, gcs_path, file_ext, index, **kwargs)
 
-            delete_answer = input(f"PLEASE CONFIRM DELETION OF '{location}'. TYPE 'DELETE' then press ENTER.")
-            if delete_answer == 'DELETE':
-                print(f"""[Running command: `gcloud storage rm {location}`]\n""")
-                subprocess.run(["gcloud", "storage", "rm", location])
-            else: print('Deletion canceled.')
+            # Handle Excel workbooks (Multiple DataFrames)
+            if isinstance(data, dict):
+                return self._save_excel_workbook(data, gcs_path, index, **kwargs)
                 
+            # Handle matplotlib figures
+            elif hasattr(data, 'savefig'):
+                return self._save_plot(data, gcs_path, file_ext, dpi)
+            
+            # Handle other file types
+            else:
+                return self._save_file(data, gcs_path, filename)
                 
-        elif (bucket_or_disk.lower() in ['persistent disk','persistent_disk', 'disk']) \
-                or (bucket_or_disk.lower() not in ['bucket','']) :
-            location = f"{directory}/{filename}"
-            print(f'Deleting {location}')
-
-            delete_answer = input(f"PLEASE CONFIRM DELETION OF '{location}'. TYPE 'DELETE' then press ENTER.")
-            if delete_answer == 'DELETE':
-                print(f"""[Running command: `os.system('rm {location}')`]\n""")
-                os.system(f'rm {location}')
-            else: print('Deletion canceled.')
+        except Exception as e:
+            logger.error(f"Error saving data: {e}")
+            return False
+    
+    def _save_dataframe(self, df: pd.DataFrame, gcs_path: str, file_ext: str, 
+                       index: bool, **kwargs) -> bool:
+        """Save DataFrame to GCS."""
+        save_functions = {
+            '.csv': lambda d, p: d.to_csv(p, index=index, **kwargs),
+            '.tsv': lambda d, p: d.to_csv(p, sep='\t', index=index, **kwargs),
+            '.xlsx': lambda d, p: d.to_excel(p, index=index, **kwargs),
+            '.parquet': lambda d, p: d.to_parquet(p, index=index, **kwargs),
+            '.json': lambda d, p: d.to_json(p, **kwargs)
+        }
+        
+        if file_ext in save_functions:
+            save_functions[file_ext](df, gcs_path)
+            logger.info(f"DataFrame saved successfully")
+            return True
+        else:
+            logger.error(f"Unsupported DataFrame format: {file_ext}")
+            return False
+    
+    def _save_plot(self, plot, gcs_path: str, file_ext: str, dpi: Union[str, int]) -> bool:
+        """Save plot to GCS."""
+        plot_extensions = {'.png', '.jpg', '.jpeg', '.pdf', '.svg', '.eps', '.tiff'}
+        
+        if file_ext not in plot_extensions:
+            logger.error(f"Unsupported plot format: {file_ext}")
+            return False
+        
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp_file:
+            plot.savefig(tmp_file.name, dpi=dpi, bbox_inches='tight')
+            result = subprocess.run(
+                ['gcloud', 'storage', 'cp', tmp_file.name, gcs_path],
+                capture_output=True, text=True
+            )
+            os.unlink(tmp_file.name)
+            
+            if result.returncode == 0:
+                logger.info("Plot saved successfully")
+                return True
+            else:
+                logger.error(f"Error saving plot: {result.stderr}")
+                return False
+    
+    def _save_file(self, data: Any, gcs_path: str, filename: str) -> bool:
+        """Save generic file to GCS."""
+        if isinstance(data, (str, bytes)):
+            # Handle string or bytes data
+            with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tmp_file:
+                if isinstance(data, str):
+                    tmp_file.write(data.encode('utf-8'))
+                else:
+                    tmp_file.write(data)
+                tmp_file.flush()
+                
+                result = subprocess.run(
+                    ['gcloud', 'storage', 'cp', tmp_file.name, gcs_path],
+                    capture_output=True, text=True
+                )
+                os.unlink(tmp_file.name)
+                
+                if result.returncode == 0:
+                    logger.info("File saved successfully")
+                    return True
+                else:
+                    logger.error(f"Error saving file: {result.stderr}")
+                    return False
+        else:
+            # Assume it's already a file on disk
+            result = subprocess.run(
+                ['gcloud', 'storage', 'cp', filename, gcs_path],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                logger.info("File copied successfully")
+                return True
+            else:
+                logger.error(f"Error copying file: {result.stderr}")
+                return False
+    
+    def _save_excel_workbook(self, sheets_dict: Dict[str, pd.DataFrame], filename:str, 
+                           bucket_name: Optional[str] = None,
+                           directory: Optional[str] = None,
+                           index: bool = True, **kwargs) -> bool:
+        """
+        Save multiple DataFrames as Excel workbook with multiple sheets.
+        
+        Args:
+            filename: Excel filename
+            sheets_dict: Dictionary of {sheet_name: DataFrame}
+            bucket_name: Override default bucket
+            directory: Override default directory
+            index: Whether to include index
+            **kwargs: Additional arguments for to_excel
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not filename.endswith('.xlsx'):
+            filename += '.xlsx'
+        
+        gcs_path = self._construct_gcs_path(filename, bucket_name, directory)
+        
+        try:
+            with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_file:
+                with pd.ExcelWriter(tmp_file.name, engine='openpyxl') as writer:
+                    for sheet_name, df in sheets_dict.items():
+                        df.to_excel(writer, sheet_name=sheet_name, index=index, **kwargs)
+                
+                result = subprocess.run(
+                    ['gcloud', 'storage', 'cp', tmp_file.name, gcs_path],
+                    capture_output=True, text=True
+                )
+                os.unlink(tmp_file.name)
+                
+                if result.returncode == 0:
+                    logger.info(f"Excel workbook saved to: {gcs_path}")
+                    return True
+                else:
+                    logger.error(f"Error saving Excel workbook: {result.stderr}")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error creating Excel workbook: {e}")
+            return False
+    
+    def read_data_from_bucket(self, filename: str, 
+                             bucket_name: Optional[str] = None,
+                             directory: Optional[str] = None,
+                             save_copy_locally: bool = False,
+                             local_only: bool = False,
+                             **kwargs) -> Any:
+        """
+        Read data from GCS bucket.
+        
+        Args:
+            filename: File to read
+            bucket_name: Override default bucket
+            directory: Override default directory
+            save_copy_locally: Whether to save a local copy
+            local_only: Only download, don't load into memory
+            **kwargs: Additional arguments for read functions
+            
+        Returns:
+            Loaded data or None if error
+        """
+        gcs_path = self._construct_gcs_path(filename, bucket_name, directory)
+        
+        if not self._validate_bucket_access(gcs_path.split('/')[2]):
+            return None
+        
+        logger.info(f"Reading data from: {gcs_path}")
+        
+        try:
+            file_ext = Path(filename).suffix.lower()
+            
+            # Handle different file types
+            if file_ext in {'.csv', '.tsv', '.xlsx', '.parquet', '.json'}:
+                return self._read_dataframe(gcs_path, file_ext, save_copy_locally, local_only, **kwargs)
+            
+            elif file_ext in {'.png', '.jpg', '.jpeg', '.pdf', '.svg'}:
+                return self._read_image(gcs_path, filename, save_copy_locally)
+            
+            else:
+                return self._read_generic_file(gcs_path, filename, save_copy_locally, local_only)
+                
+        except Exception as e:
+            logger.error(f"Error reading data: {e}")
+            return None
+    
+    def _read_dataframe(self, gcs_path: str, file_ext: str, save_copy_locally: bool, 
+                       local_only: bool, **kwargs) -> Optional[pd.DataFrame]:
+        """Read DataFrame from GCS."""
+        if local_only:
+            # Just download the file
+            local_filename = Path(gcs_path).name
+            result = subprocess.run(
+                ['gcloud', 'storage', 'cp', gcs_path, local_filename],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                logger.info(f"File downloaded to: {local_filename}")
+            return None
+        
+        # Read functions
+        read_functions = {
+            '.csv': lambda p: pd.read_csv(p, **kwargs),
+            '.tsv': lambda p: pd.read_csv(p, sep='\t', **kwargs),
+            '.xlsx': lambda p: pd.read_excel(p, **kwargs),
+            '.parquet': lambda p: pd.read_parquet(p, **kwargs),
+            '.json': lambda p: pd.read_json(p, **kwargs)
+        }
+        
+        if file_ext in read_functions:
+            df = read_functions[file_ext](gcs_path)
+            
+            if save_copy_locally:
+                local_filename = Path(gcs_path).name
+                result = subprocess.run(
+                    ['gcloud', 'storage', 'cp', gcs_path, local_filename],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    logger.info(f"Copy saved locally: {local_filename}")
+            
+            return df
+        
+        return None
+    
+    def _read_image(self, gcs_path: str, filename: str, save_copy_locally: bool):
+        """Read image from GCS."""
+        local_filename = Path(filename).name
+        
+        result = subprocess.run(
+            ['gcloud', 'storage', 'cp', gcs_path, local_filename],
+            capture_output=True, text=True
+        )
+        
+        if result.returncode == 0:
+            if save_copy_locally:
+                logger.info(f"Image saved locally: {local_filename}")
+                return Image(local_filename)
+            else:
+                # Display image and clean up
+                img = Image(local_filename)
+                display(img)
+                os.unlink(local_filename)
+                return img
+        
+        return None
+    
+    def _read_generic_file(self, gcs_path: str, filename: str, save_copy_locally: bool, local_only: bool):
+        """Read generic file from GCS."""
+        local_filename = Path(filename).name
+        
+        result = subprocess.run(
+            ['gcloud', 'storage', 'cp', gcs_path, local_filename],
+            capture_output=True, text=True
+        )
+        
+        if result.returncode == 0:
+            if save_copy_locally or local_only:
+                logger.info(f"File downloaded to: {local_filename}")
+                return local_filename
+            else:
+                # Read content and clean up
+                with open(local_filename, 'rb') as f:
+                    content = f.read()
+                os.unlink(local_filename)
+                return content
+        
+        return None
+    
+    def copy_between_buckets(self, source_path: str, destination_path: str) -> bool:
+        """
+        Copy data between GCS locations.
+        
+        Args:
+            source_path: Source GCS path (can be relative or absolute)
+            destination_path: Destination GCS path (can be relative or absolute)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not source_path.startswith('gs://'):
+            source_path = self._construct_gcs_path(source_path)
+        
+        if not destination_path.startswith('gs://'):
+            destination_path = self._construct_gcs_path(destination_path)
+        
+        logger.info(f"Copying from {source_path} to {destination_path}")
+        
+        try:
+            result = subprocess.run(
+                ['gcloud', 'storage', 'cp', source_path, destination_path],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                logger.info("Copy completed successfully")
+                return True
+            else:
+                logger.error(f"Copy failed: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error during copy: {e}")
+            return False
+    
+    def list_files(self, pattern: str = '*', bucket_name: Optional[str] = None,
+                   directory: Optional[str] = None, recursive: bool = False) -> list:
+        """
+        List files in GCS bucket.
+        
+        Args:
+            pattern: File pattern to match
+            bucket_name: Override default bucket
+            directory: Override default directory
+            recursive: Whether to search recursively
+            
+        Returns:
+            list: List of file paths
+        """
+        bucket = bucket_name or self.bucket_name
+        dir_path = directory if directory is not None else self.directory
+        
+        if recursive and pattern == '*':
+            search_path = f'gs://{bucket}/**'
+        else:
+            search_path = self._construct_gcs_path(pattern, bucket, dir_path)
+        
+        logger.info(f"Listing files in: {search_path}")
+        
+        try:
+            result = subprocess.run(
+                ['gcloud', 'storage', 'ls', search_path],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                files = [line.strip() for line in result.stdout.split('\n') if line.strip()]
+                logger.info(f"Found {len(files)} files")
+                return files
+            else:
+                logger.error(f"List failed: {result.stderr}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error listing files: {e}")
+            return []
+    
+    def delete_file(self, filename: str, bucket_name: Optional[str] = None,
+                    directory: Optional[str] = None, confirm: bool = True) -> bool:
+        """
+        Delete file from GCS bucket.
+        
+        Args:
+            filename: File to delete
+            bucket_name: Override default bucket
+            directory: Override default directory
+            confirm: Whether to ask for confirmation
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        gcs_path = self._construct_gcs_path(filename, bucket_name, directory)
+        
+        if confirm:
+            response = input(f"Are you sure you want to delete '{gcs_path}'? (yes/no): ")
+            if response.lower() not in ['yes', 'y']:
+                logger.info("Deletion cancelled")
+                return False
+        
+        logger.info(f"Deleting: {gcs_path}")
+        
+        try:
+            result = subprocess.run(
+                ['gcloud', 'storage', 'rm', gcs_path],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                logger.info("File deleted successfully")
+                return True
+            else:
+                logger.error(f"Deletion failed: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error deleting file: {e}")
+            return False
+    
+    def get_file_info(self, filename: str, partial_string: Optional[bool] = False
+                      , bucket_name: Optional[str] = None, directory: Optional[str] = None) -> Optional[Dict]:
+        """
+        Get information about a file in GCS.
+        
+        Args:
+            filename: File to get info for
+            bucket_name: Override default bucket
+            directory: Override default directory
+            
+        Returns:
+            dict: File information or None if not found
+        """
+        
+        if partial_string == True:
+            gcs_path =  self._construct_gcs_path('*'+filename+'*', bucket_name, '**')
+        else:
+            gcs_path = self._construct_gcs_path(filename, bucket_name, directory)
+        
+        
+        try:
+            result = subprocess.run(
+                ['gcloud', 'storage', 'ls', '-L', gcs_path],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                # Parse the output to extract file info
+                lines = result.stdout.strip().split('\n')
+                info = {}
+                for line in lines:
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        info[key.strip()] = value.strip()
+                return info
+            else:
+                logger.error(f"File info failed: {result.stderr}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting file info: {e}")
+            return None
+    
+    def print_help(self):
+        """Print comprehensive help documentation."""
+        help_text = """
+        GCP Data Storage Manager - Help Documentation
+        ==========================================
+        
+        This class provides easy data management between your local environment and Google Cloud Storage.
+        
+        INITIALIZATION:
+        --------------
+        # Auto-detect bucket from environment
+        storage = GCPDataStorage()
+        
+        # Specify bucket explicitly
+        storage = GCPDataStorage(bucket_name='my-bucket', directory='data')
+        
+        SAVING DATA:
+        -----------
+        # Save DataFrame
+        storage.save_data_to_bucket(df, 'my_data.csv')
+        
+        # Save plot
+        storage.save_data_to_bucket(plt.gcf(), 'my_plot.png')
+        
+        # Save Excel workbook with multiple sheets
+        sheets = {'sheet1': df1, 'sheet2': df2}
+        storage.save_excel_workbook('workbook.xlsx', sheets)
+        
+        READING DATA:
+        ------------
+        # Read DataFrame
+        df = storage.read_data_from_bucket('my_data.csv')
+        
+        # Read and save local copy
+        df = storage.read_data_from_bucket('my_data.csv', save_copy_locally=True)
+        
+        # Just download file
+        storage.read_data_from_bucket('my_data.csv', local_only=True)
+        
+        FILE MANAGEMENT:
+        ---------------
+        # List files
+        files = storage.list_files('*.csv')
+        
+        # Copy between locations
+        storage.copy_between_buckets('source.csv', 'destination.csv')
+        
+        # Delete file
+        storage.delete_file('old_file.csv')
+        
+        # Get file info (full or partial filename)
+        info = storage.get_file_info('my_file.csv')
+        info = storage.get_file_info('file', partial_string = True)
+        
+        SUPPORTED FORMATS:
+        -----------------
+        DataFrames: .csv, .tsv, .xlsx, .parquet, .json
+        Images: .png, .jpg, .jpeg, .pdf, .svg, .eps, .tiff
+        Other: Any file type (generic binary handling)
+        
+        ENVIRONMENT COMPATIBILITY:
+        -------------------------
+        - All of Us Researcher Workbench
+        - Google Colab
+        - Vertex AI Workbench
+        - Local development with GCP credentials
+        - Any GCP Compute instance
+        """
+        print(help_text)

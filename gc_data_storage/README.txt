@@ -1,17 +1,19 @@
-Functions in the 'gc_data_storage' package.
+Functions in the 'gc-data-storage' package.
 - save_data_to_bucket()
 - read_data_from_bucket()
-- list_saved_data()
-- copy_from_bucket_to_bucket()
+- list_files()
+- delete_file()
+- copy_between_buckets()
+- copy_between_buckets()
 
 Using the package
 
 ```
-pip install gc_data_storage
-from gc_data_storage import gc_data_storage as gs
-gs = gs()
+pip install gc-data-storage
+from gc-data-storage import GCPDataStorage
+gs = GCPDataStorage()
 
-gs.list_saved_data()
+gs.list_files()
 
 ```
 

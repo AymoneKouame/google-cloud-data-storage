@@ -1,6 +1,6 @@
-#INIT FOR GC_DATA_STORAGE - updated 4/22/2025
+# _init_ for GCPDataStorage, updated 7/18/2025
 
-from gc_data_storage.gc_data_storage import gc_data_storage
+from gc_data_storage.gc_data_storage import GCPDataStorage
 
 import subprocess
 import os
