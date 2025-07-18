@@ -8,14 +8,42 @@ The `GCPDataStorage` class is a comprehensive Python utility for managing data s
 **Date:** 2025-07-18  
 **Version:** 3.0.0
 
-## Features
+## Main functions (see 'Core Methods' title below for details)
+- `save_data_to_bucket()`
+- `read_data_from_bucket()`
+- `copy_between_buckets()`
+- `list_files()`
+- `delete_file()`
+- `get_file_info()`
+
+### Features
 
 - **Universal GCP Compatibility**: Works across all GCP environments including All of Us Researcher Workbench, Google Colab, Vertex AI Workbench, and local development
 - **Auto-detection**: Automatically detects bucket names and project IDs from environment variables
-- **Multi-format Support**: Handles DataFrames, plots, images, Excel workbooks, and generic files
+- **Multi-format Support**: Handles multiple file formats, dataFrames, plots, images, Excel workbooks, and generic files
 - **Robust Error Handling**: Comprehensive logging and error management
 - **Flexible Path Management**: Supports both relative and absolute GCS paths
-- **Batch Operations**: Copy, list, and delete operations for file management
+- **Batch Operations**: Copy, list, search, and delete operations for file management
+
+### Supported File Formats
+
+#### DataFrames
+- **CSV** (`.csv`): Standard comma-separated values
+- **TSV** (`.tsv`): Tab-separated values
+- **Excel** (`.xlsx`): Microsoft Excel format
+- **Parquet** (`.parquet`): Columnar storage format
+- **JSON** (`.json`): JavaScript Object Notation
+
+#### Images and Plots
+- **PNG** (`.png`): Portable Network Graphics
+- **JPEG** (`.jpg`, `.jpeg`): Joint Photographic Experts Group
+- **PDF** (`.pdf`): Portable Document Format
+- **SVG** (`.svg`): Scalable Vector Graphics
+- **EPS** (`.eps`): Encapsulated PostScript
+- **TIFF** (`.tiff`): Tagged Image File Format
+
+#### Generic Files
+- Any file type supported through binary handling
 
 ## Complete Workflow Example
 
@@ -64,6 +92,44 @@ info = storage.get_file_info('gs://my-analysis-bucket/experiments/analysis_plot.
 info = storage.get_file_info('plot', partial_string = True)
 
 ```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## Quick Start
+
+### Basic Initialization
+
+```python
+# Install the package
+pip install --upgrade gc_data_storage
+
+# Auto-detect bucket from environment variables
+storage = GCPDataStorage()
+
+# Specify bucket explicitly
+storage = GCPDataStorage(bucket_name='my-bucket')
+
+# With custom directory and project
+storage = GCPDataStorage(
+    bucket_name='my-bucket',
+    directory='data/experiments',
+    project_id='my-project'
+)
+```
+
+#### Environment Auto-Detection
+
+The class automatically detects configuration from these environment variables:
+
+**Bucket Detection:**
+- `WORKSPACE_BUCKET`
+- `GCS_BUCKET`
+- `GOOGLE_CLOUD_BUCKET`
+- `BUCKET_NAME`
+
+**Project Detection:**
+- `GOOGLE_CLOUD_PROJECT`
+- `GCP_PROJECT`
+- `PROJECT_ID`
 
 ## Installation and Dependencies
 
@@ -82,39 +148,6 @@ import tempfile
 import shutil
 ```
 
-## Quick Start
-
-### Basic Initialization
-
-```python
-# Auto-detect bucket from environment variables
-storage = GCPDataStorage()
-
-# Specify bucket explicitly
-storage = GCPDataStorage(bucket_name='my-bucket')
-
-# With custom directory and project
-storage = GCPDataStorage(
-    bucket_name='my-bucket',
-    directory='data/experiments',
-    project_id='my-project'
-)
-```
-
-### Environment Auto-Detection
-
-The class automatically detects configuration from these environment variables:
-
-**Bucket Detection:**
-- `WORKSPACE_BUCKET`
-- `GCS_BUCKET`
-- `GOOGLE_CLOUD_BUCKET`
-- `BUCKET_NAME`
-
-**Project Detection:**
-- `GOOGLE_CLOUD_PROJECT`
-- `GCP_PROJECT`
-- `PROJECT_ID`
 
 ## API Reference
 
@@ -128,6 +161,8 @@ GCPDataStorage(bucket_name=None, directory='', project_id=None)
 - `bucket_name` (str, optional): GCS bucket name. Auto-detected if None
 - `directory` (str, optional): Default directory within bucket
 - `project_id` (str, optional): GCP project ID. Auto-detected if None
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ### Core Methods
 
@@ -306,26 +341,6 @@ info = storage.get_file_info('data.csv')
 # Search with partial filename
 info = storage.get_file_info('experiment', partial_string=True)
 ```
-
-## Supported File Formats
-
-### DataFrames
-- **CSV** (`.csv`): Standard comma-separated values
-- **TSV** (`.tsv`): Tab-separated values
-- **Excel** (`.xlsx`): Microsoft Excel format
-- **Parquet** (`.parquet`): Columnar storage format
-- **JSON** (`.json`): JavaScript Object Notation
-
-### Images and Plots
-- **PNG** (`.png`): Portable Network Graphics
-- **JPEG** (`.jpg`, `.jpeg`): Joint Photographic Experts Group
-- **PDF** (`.pdf`): Portable Document Format
-- **SVG** (`.svg`): Scalable Vector Graphics
-- **EPS** (`.eps`): Encapsulated PostScript
-- **TIFF** (`.tiff`): Tagged Image File Format
-
-### Generic Files
-- Any file type supported through binary handling
 
 ### Error Handling Best Practices
 
