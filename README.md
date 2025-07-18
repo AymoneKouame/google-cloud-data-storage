@@ -92,7 +92,6 @@ info = storage.get_file_info('gs://my-analysis-bucket/experiments/analysis_plot.
 info = storage.get_file_info('plot', partial_string = True)
 
 ```
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Quick Start
 
@@ -162,7 +161,6 @@ GCPDataStorage(bucket_name=None, directory='', project_id=None)
 - `directory` (str, optional): Default directory within bucket
 - `project_id` (str, optional): GCP project ID. Auto-detected if None
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ### Core Methods
 
