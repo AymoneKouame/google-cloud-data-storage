@@ -17,6 +17,43 @@ The `GCPDataStorage` class is a comprehensive Python utility for managing data s
 - **Flexible Path Management**: Supports both relative and absolute GCS paths
 - **Batch Operations**: Copy, list, and delete operations for file management
 
+## Complete Workflow Example
+
+```python
+# Initialize storage manager
+storage = GCPDataStorage(bucket_name='my-analysis-bucket', directory='experiments')
+
+# Save analysis results
+results_df = pd.DataFrame({'metric': ['accuracy', 'precision'], 'value': [0.95, 0.87]})
+storage.save_data_to_bucket(results_df, 'results.csv')
+
+# Save visualization
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
+plt.title('Analysis Results')
+storage.save_data_to_bucket(plt.gcf(), 'analysis_plot.png', dpi=300)
+
+# Create multi-sheet Excel report
+raw_data_df = pd.DataFrame({'race': ['Asian', 'White'], 'count': [1523, 5899]})
+metadata_df = pd.DataFrame({'metric': ['size', 'has'], 'value': [500, 's5f5hh']})
+sheets = {
+    'Summary': results_df,
+    'Raw Data': raw_data_df,
+    'Metadata': metadata_df
+}
+storage.save_data_to_bucket(sheets, 'comprehensive_report.xlsx')
+
+# List all files
+files = storage.list_files('*')
+print(f"Total files: {len(files)}")
+
+# Read data back
+loaded_df = storage.read_data_from_bucket('results.csv')
+print(loaded_df.head())
+
+```
+
 ## Installation and Dependencies
 
 ```python
@@ -278,42 +315,6 @@ info = storage.get_file_info('experiment', partial_string=True)
 
 ### Generic Files
 - Any file type supported through binary handling
-
-## Usage Examples
-
-### Complete Workflow Example
-
-```python
-# Initialize storage manager
-storage = GCPDataStorage(bucket_name='my-analysis-bucket', directory='experiments')
-
-# Save analysis results
-results_df = pd.DataFrame({'metric': ['accuracy', 'precision'], 'value': [0.95, 0.87]})
-storage.save_data_to_bucket(results_df, 'results.csv')
-
-# Save visualization
-import matplotlib.pyplot as plt
-plt.figure(figsize=(10, 6))
-plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
-plt.title('Analysis Results')
-storage.save_data_to_bucket(plt.gcf(), 'analysis_plot.png', dpi=300)
-
-# Create multi-sheet Excel report
-sheets = {
-    'Summary': results_df,
-    'Raw Data': raw_data_df,
-    'Metadata': metadata_df
-}
-storage.save_excel_workbook(sheets, 'comprehensive_report.xlsx')
-
-# List all files
-files = storage.list_files('*')
-print(f"Total files: {len(files)}")
-
-# Read data back
-loaded_df = storage.read_data_from_bucket('results.csv')
-print(loaded_df.head())
-```
 
 ### Error Handling Best Practices
 
