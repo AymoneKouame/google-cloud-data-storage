@@ -115,6 +115,9 @@ save_data_to_bucket(
 # Save DataFrame
 success = storage.save_data_to_bucket(df, 'data.csv')
 
+# Save multiple DataFrames as Excel workbook with multiple sheets.
+success = storage.save_data_to_bucket(data= {'sheet1': df1, "sheet2":df2}, filename = 'data_workbook.xlsx')
+
 # Save plot with custom DPI
 success = storage.save_data_to_bucket(plt.gcf(), 'plot.png', dpi=300)
 
@@ -163,40 +166,6 @@ storage.read_data_from_bucket('data.csv', local_only=True)
 
 # Read with custom parameters
 df = storage.read_data_from_bucket('data.csv', sep=';', encoding='utf-8')
-```
-
-#### save_excel_workbook()
-
-Save multiple DataFrames as Excel workbook with multiple sheets.
-
-```python
-save_excel_workbook(
-    sheets_dict,
-    filename,
-    bucket_name=None,
-    directory=None,
-    index=True,
-    **kwargs
-) -> bool
-```
-
-**Parameters:**
-- `sheets_dict` (dict): Dictionary of {sheet_name: DataFrame}
-- `filename` (str): Excel filename
-- `bucket_name` (str, optional): Override default bucket
-- `directory` (str, optional): Override default directory
-- `index` (bool): Include index (default: True)
-- `**kwargs`: Additional arguments for to_excel
-
-**Example:**
-```python
-# Create workbook with multiple sheets
-sheets = {
-    'summary': summary_df,
-    'details': details_df,
-    'analysis': analysis_df
-}
-success = storage.save_excel_workbook(sheets, 'report.xlsx')
 ```
 
 ### File Management Methods
