@@ -20,7 +20,11 @@ The `GCPDataStorage` class is a comprehensive Python utility for managing data s
 ## Complete Workflow Example
 
 ```python
+# Install the package
+pip install --upgrade gc_data_storage
+
 # Initialize storage manager
+from gc_data_storage import GCPDataStorage
 storage = GCPDataStorage(directory='experiments') #uses the default bucket_name in the environment. User can define a bucket name with the arg: bucket_name='my-analysis-bucket'
                         
 # Save analysis results
