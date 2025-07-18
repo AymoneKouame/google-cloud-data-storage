@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `GCPDataStorage` class is a comprehensive Python utility for managing data storage between local environments and Google Cloud Storage (GCS) buckets. It provides a unified interface for saving, reading, and managing various data types including DataFrames, plots, images, and generic files.
+The `GCPDataStorage` class from the `gc_data_storage` package is a comprehensive Python utility for managing data storage between local environments and Google Cloud Storage (GCS) buckets. It provides a unified interface for saving, reading, and managing various data types including DataFrames, plots, images, and generic files.
 
 **Author:** Aymone Jeanne Kouame  
 **Date:** 2025-07-18  
