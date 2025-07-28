@@ -50,21 +50,14 @@ sheets = {
 }
 storage.save_data_to_bucket(sheets, 'comprehensive_report.xlsx')
 
-
 # Read data back
 loaded_df = storage.read_data_from_bucket('results.csv')
 print(loaded_df.head())
-
 ```
 
-## Quick Start
-
-### Basic Initialization
+### More Initialization Details
 
 ```python
-# Install the package
-pip install --upgrade gc_data_storage
-
 # Auto-detect bucket from environment variables
 storage = GCPDataStorage()
 
