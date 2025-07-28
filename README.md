@@ -8,6 +8,76 @@ The `GCPDataStorage` class from the `gc_data_storage` package is a comprehensive
 **Date:** 2025-07-18  
 **Version:** 3.0.0
 
+## Quick Start & Complete Workflow Example
+
+```python
+# Install the package
+pip install --upgrade gc_data_storage
+
+# Initialize storage manager
+from gc_data_storage import GCPDataStorage
+storage = GCPDataStorage(directory='experiments') #uses the default bucket_name in the environment. User can define a bucket name with the arg: bucket_name='my-analysis-bucket'
+
+# List all files
+storage.list_files()
+
+# Get File Info or Search a file
+## Using the full location name - if known
+info = storage.get_file_info('gs://my-analysis-bucket/experiments/analysis_plot.png')
+
+## Using a partial string
+info = storage.get_file_info('plot', partial_string = True)
+                        
+# Save analysis results
+results_df = pd.DataFrame({'metric': ['accuracy', 'precision'], 'value': [0.95, 0.87]})
+storage.save_data_to_bucket(results_df, 'results.csv')
+
+# Save visualization
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
+plt.title('Analysis Results')
+storage.save_data_to_bucket(plt.gcf(), 'analysis_plot.png', dpi=300)
+
+# Create multi-sheet Excel report
+raw_data_df = pd.DataFrame({'race': ['Asian', 'White'], 'count': [1523, 5899]})
+metadata_df = pd.DataFrame({'metric': ['size', 'has'], 'value': [500, 's5f5hh']})
+sheets = {
+    'Summary': results_df,
+    'Raw Data': raw_data_df,
+    'Metadata': metadata_df
+}
+storage.save_data_to_bucket(sheets, 'comprehensive_report.xlsx')
+
+
+# Read data back
+loaded_df = storage.read_data_from_bucket('results.csv')
+print(loaded_df.head())
+
+```
+
+## Quick Start
+
+### Basic Initialization
+
+```python
+# Install the package
+pip install --upgrade gc_data_storage
+
+# Auto-detect bucket from environment variables
+storage = GCPDataStorage()
+
+# Specify bucket explicitly
+storage = GCPDataStorage(bucket_name='my-bucket')
+
+# With custom directory and project
+storage = GCPDataStorage(
+    bucket_name='my-bucket',
+    directory='data/experiments',
+    project_id='my-project'
+)
+```
+
 ## Main functions (see 'Core Methods' title below for details)
 - `save_data_to_bucket()`
 - `read_data_from_bucket()`
@@ -45,77 +115,7 @@ The `GCPDataStorage` class from the `gc_data_storage` package is a comprehensive
 #### Generic Files
 - Any file type supported through binary handling
 
-## Complete Workflow Example
-
-```python
-# Install the package
-pip install --upgrade gc_data_storage
-
-# Initialize storage manager
-from gc_data_storage import GCPDataStorage
-storage = GCPDataStorage(directory='experiments') #uses the default bucket_name in the environment. User can define a bucket name with the arg: bucket_name='my-analysis-bucket'
-                        
-# Save analysis results
-results_df = pd.DataFrame({'metric': ['accuracy', 'precision'], 'value': [0.95, 0.87]})
-storage.save_data_to_bucket(results_df, 'results.csv')
-
-# Save visualization
-import matplotlib.pyplot as plt
-plt.figure(figsize=(10, 6))
-plt.plot([1, 2, 3, 4], [1, 4, 2, 3])
-plt.title('Analysis Results')
-storage.save_data_to_bucket(plt.gcf(), 'analysis_plot.png', dpi=300)
-
-# Create multi-sheet Excel report
-raw_data_df = pd.DataFrame({'race': ['Asian', 'White'], 'count': [1523, 5899]})
-metadata_df = pd.DataFrame({'metric': ['size', 'has'], 'value': [500, 's5f5hh']})
-sheets = {
-    'Summary': results_df,
-    'Raw Data': raw_data_df,
-    'Metadata': metadata_df
-}
-storage.save_data_to_bucket(sheets, 'comprehensive_report.xlsx')
-
-# List all files
-files = storage.list_files('*')
-print(f"Total files: {len(files)}")
-
-# Read data back
-loaded_df = storage.read_data_from_bucket('results.csv')
-print(loaded_df.head())
-
-# Get File Info
-## Using the full location name - if known
-info = storage.get_file_info('gs://my-analysis-bucket/experiments/analysis_plot.png')
-
-## Using a partial string
-info = storage.get_file_info('plot', partial_string = True)
-
-```
-
-## Quick Start
-
-### Basic Initialization
-
-```python
-# Install the package
-pip install --upgrade gc_data_storage
-
-# Auto-detect bucket from environment variables
-storage = GCPDataStorage()
-
-# Specify bucket explicitly
-storage = GCPDataStorage(bucket_name='my-bucket')
-
-# With custom directory and project
-storage = GCPDataStorage(
-    bucket_name='my-bucket',
-    directory='data/experiments',
-    project_id='my-project'
-)
-```
-
-#### Environment Auto-Detection
+### Environment Auto-Detection
 
 The class automatically detects configuration from these environment variables:
 
