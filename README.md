@@ -15,8 +15,9 @@ The `GCPDataStorage` class from the `gc_data_storage` package is a comprehensive
 pip install --upgrade gc_data_storage
 
 # Initialize storage manager
+#uses the default bucket_name in the environment. User can define a bucket name with the arg: bucket_name='my-analysis-bucket'
 from gc_data_storage import GCPDataStorage
-storage = GCPDataStorage(directory='experiments') #uses the default bucket_name in the environment. User can define a bucket name with the arg: bucket_name='my-analysis-bucket'
+storage = GCPDataStorage(directory='experiments') 
 
 # List all files
 storage.list_files()
